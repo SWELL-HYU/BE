@@ -29,14 +29,38 @@ class UserPayload(BaseModel):
         populate_by_name = True
         orm_mode = True
 
+# 회원가입 응답 데이터 스키마 1
+class SignupResponseData(BaseModel):
+    user: UserPayload
 
-class UserResponseData(BaseModel):
+# 회원가입 응답 데이터 스키마 2
+class SignupResponse(BaseModel):
+    success: bool = True
+    data: SignupResponseData
+
+# 로그인 응답 데이터 스키마 1
+class LoginResponseData(BaseModel):
     user: UserPayload
     token: str
 
-
-class UserResponse(BaseModel):
+# 로그인 응답 데이터 스키마 2
+class LoginResponse(BaseModel):
     success: bool = True
-    data: UserResponseData
+    data: LoginResponseData
+
+# 로그아웃 응답 데이터 스키마
+class LogoutResponse(BaseModel):
+    success: bool = True
+    message: str = "로그아웃되었습니다"
+
+
+# 내 정보 조회 응답 데이터 스키마 1
+class MeResponseData(BaseModel):
+    user: UserPayload
+
+# 내 정보 조회 응답 데이터 스키마 2
+class MeResponse(BaseModel):
+    success: bool = True
+    data: MeResponseData
 
 

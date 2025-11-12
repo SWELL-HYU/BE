@@ -35,6 +35,26 @@ class DuplicateEmailError(AppException):
         super().__init__(message="이미 가입된 이메일입니다.")
 
 
+class InvalidCredentialsError(AppException):
+    """로그인 시 잘못된 자격 증명을 사용할 때 발생하는 예외."""
+
+    code = "INVALID_CREDENTIALS"
+    status_code = status.HTTP_401_UNAUTHORIZED
+
+    def __init__(self) -> None:
+        super().__init__(message="이메일 또는 비밀번호가 올바르지 않습니다")
+
+
+class UnauthorizedError(AppException):
+    """인증이 필요한 요청에서 토큰이 없거나 유효하지 않을 때 발생하는 예외."""
+
+    code = "UNAUTHORIZED"
+    status_code = status.HTTP_401_UNAUTHORIZED
+
+    def __init__(self, *, message: Optional[str] = None) -> None:
+        super().__init__(message=message or "인증이 필요합니다.")
+
+
 class ValidationError(AppException):
     """요청 유효성 검증 실패 시 사용하는 예외."""
 
@@ -57,7 +77,7 @@ def register_exception_handlers(app: FastAPI) -> None:
             loc = error.get("loc", [])
             error_type = error.get("type")
             if loc and loc[-1] == "password" and error_type == "string_too_short":
-                message = "비밀번호는 8자 이상이어야 합니다"
+                message = "비밀번호가 8자 이상이여야합니다"
                 break
 
         return await app_exception_handler(

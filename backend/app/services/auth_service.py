@@ -4,21 +4,21 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import DuplicateEmailError, ValidationError
-from app.core.security import create_access_token, hash_password
+from app.core.exceptions import DuplicateEmailError, InvalidCredentialsError, UnauthorizedError, ValidationError
+from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.user_request import UserCreateRequest
+from app.schemas.user_request import UserCreateRequest, UserLoginRequest
 
 
-def register_user(db: Session, payload: UserCreateRequest) -> Tuple[User, str]:
+def register_user(db: Session, payload: UserCreateRequest) -> User:
     """
-    신규 사용자를 등록하고 액세스 토큰을 발급한다.
+    신규 사용자를 등록한다.
     """
 
     # 이메일 중복 체크
@@ -55,14 +55,53 @@ def register_user(db: Session, payload: UserCreateRequest) -> Tuple[User, str]:
     # 사용자 생성 후 새로운 사용자 정보 조회(ID 조회용)
     db.refresh(user)
 
+    return user
+
+
+def authenticate_user(db: Session, payload: UserLoginRequest) -> tuple[User, str]:
+    """
+    사용자를 인증하고 액세스 토큰을 발급한다.
+    """
+
+    # 사용자 조회
+    user = db.execute(select(User).where(User.email == payload.email)).scalar_one_or_none()
+
+    # 사용자 인증 실패 시 예외 처리
+    if user is None or not verify_password(payload.password, user.password_hash):
+        raise InvalidCredentialsError()
+
     # 액세스 토큰 생성
     token = create_access_token(
         subject=user.user_id,
+        expires_delta=timedelta(days=1),
         claims={
             "email": user.email,
         },
     )
 
     return user, token
+
+
+def get_user_from_token(db: Session, token: str) -> User:
+    """액세스 토큰으로 현재 사용자를 조회한다."""
+
+    # 토큰 페이로드에서 사용자 ID 추출
+    payload = decode_access_token(token)
+    subject = payload.get("sub")
+    if subject is None:
+        raise UnauthorizedError()
+
+    try:
+        user_id = int(subject)
+    except (TypeError, ValueError):
+        raise UnauthorizedError() from None # 사용자 ID 추출 실패 시 예외 처리
+
+    # 사용자 조회
+    user = db.get(User, user_id)
+    if user is None:
+        raise UnauthorizedError() # 사용자 조회 실패 시 예외 처리
+
+    # 사용자 반환
+    return user
 
 

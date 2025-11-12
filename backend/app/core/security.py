@@ -12,6 +12,8 @@ from typing import Any, Dict, Optional
 
 import jwt
 
+from app.core.exceptions import UnauthorizedError
+
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "change-me")
 ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
@@ -57,16 +59,34 @@ def create_access_token(
     """
 
     to_encode: Dict[str, Any] = {}
+
+    # 추가로 포함할 클레임 딕셔너리
     if claims:
         to_encode.update(claims)
 
+    # 주체(subject, id) 추가
     to_encode.update({"sub": str(subject)})
 
+    # 토큰 만료 시간 설정
     expire_delta = expires_delta or timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
     expire_at = datetime.now(timezone.utc) + expire_delta
     to_encode["exp"] = expire_at
 
+    # 토큰 생성
     token = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return token
+
+
+def decode_access_token(token: str) -> Dict[str, Any]:
+    """JWT 액세스 토큰을 복호화하고 검증한다."""
+
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.ExpiredSignatureError as exc:
+        raise UnauthorizedError(message="토큰이 만료되었습니다. 다시 로그인해주세요.") from exc
+    except jwt.InvalidTokenError as exc:
+        raise UnauthorizedError(message="유효하지 않은 인증 토큰입니다.") from exc
+
+    return payload
 
 
