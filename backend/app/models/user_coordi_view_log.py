@@ -32,7 +32,7 @@ class UserCoordiViewLog(Base):
         nullable=False,
     )
     view_started_at = Column(
-        DateTime,
+        DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
         comment="조회 시작 시간",

@@ -2,16 +2,21 @@
 fastapi==0.121.0
 uvicorn[standard]==0.38.0
 
-# --- Database & migrations ---
+# --- Database ---
 sqlalchemy==2.0.44
 sqlalchemy2-stubs==0.0.2a38
-alembic==1.13.2
 psycopg2-binary==2.9.9 # PostgreSQL 드라이버
+
+# --- Migrations ---
+alembic==1.13.2
 
 # --- Configuration & validation ---
 python-dotenv==1.2.1
 pydantic==2.12.3
 pydantic-settings==2.6.0
+
+# --- Security ---
+PyJWT==2.9.0
 
 # --- AI & imaging ---
 google-genai==0.3.0

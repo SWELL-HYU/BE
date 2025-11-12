@@ -7,6 +7,7 @@ from __future__ import annotations
 from typing import Optional
 
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 
@@ -34,8 +35,35 @@ class DuplicateEmailError(AppException):
         super().__init__(message="이미 가입된 이메일입니다.")
 
 
+class ValidationError(AppException):
+    """요청 유효성 검증 실패 시 사용하는 예외."""
+
+    code = "VALIDATION_ERROR"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self, *, message: Optional[str] = None) -> None:
+        super().__init__(message=message or "입력값을 다시 확인해주세요.")
+
+
 def register_exception_handlers(app: FastAPI) -> None:
     """커스텀 예외를 FastAPI 인스턴스에 바인딩."""
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(
+        request: Request, exc: RequestValidationError
+    ) -> JSONResponse:
+        message = None
+        for error in exc.errors():
+            loc = error.get("loc", [])
+            error_type = error.get("type")
+            if loc and loc[-1] == "password" and error_type == "string_too_short":
+                message = "비밀번호는 8자 이상이어야 합니다"
+                break
+
+        return await app_exception_handler(
+            request,
+            ValidationError(message=message),
+        )
 
     @app.exception_handler(AppException)
     async def app_exception_handler(request: Request, exc: AppException) -> JSONResponse:

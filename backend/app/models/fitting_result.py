@@ -40,7 +40,7 @@ class FittingResult(Base):
         server_default="PROCESSING",
         comment="피팅 작업 상태",
     )
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (Index("idx_fitting_results_user", "user_id"),)
 

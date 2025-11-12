@@ -27,7 +27,7 @@ class FittingResultImage(Base):
         nullable=False,
         comment="AI가 생성한 피팅 결과물 URL",
     )
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (Index("idx_fitting_result_images_fitting", "fitting_id"),)
 

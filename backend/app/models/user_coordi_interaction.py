@@ -42,7 +42,7 @@ class UserCoordiInteraction(Base):
         Enum("LIKE", "SKIP", name="coordi_action_enum"),
         nullable=False,
     )
-    interacted_at = Column(DateTime, server_default=func.now())
+    interacted_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship(
         "User",

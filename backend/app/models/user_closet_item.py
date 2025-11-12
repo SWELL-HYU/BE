@@ -37,7 +37,7 @@ class UserClosetItem(Base):
         ForeignKey("Items.item_id", ondelete="CASCADE"),
         nullable=False,
     )
-    added_at = Column(DateTime, server_default=func.now())
+    added_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship(
         "User",

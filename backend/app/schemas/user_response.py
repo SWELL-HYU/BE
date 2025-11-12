@@ -24,8 +24,7 @@ class UserPayload(BaseModel):
     created_at: datetime = Field(alias="createdAt")
 
     class Config:
-        # populate_by_name=True: 내부 snake_case 필드명을 그대로 사용하면서,
-        # JSON 직렬화 시 alias(camelCase)를 출력 가능하도록 설정.
+        # populate_by_name=True: 내부 snake_case 필드명을 그대로 사용하면서, JSON 직렬화 시 alias(camelCase)를 출력 가능하도록 설정.
         # orm_mode=True: SQLAlchemy ORM 객체를 직접 Pydantic 모델로 변환할 수 있게 허용.
         populate_by_name = True
         orm_mode = True

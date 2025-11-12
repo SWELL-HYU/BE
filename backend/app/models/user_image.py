@@ -27,7 +27,7 @@ class UserImage(Base):
         nullable=False,
         comment="사용자의 전신 사진 URL",
     )
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (Index("idx_user_images_user", "user_id"),)
 

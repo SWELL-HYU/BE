@@ -33,7 +33,7 @@ class Item(Base):
     brand_name_ko = Column(String(100))
     price = Column(Numeric(10, 2))
     purchase_url = Column(String(1024))
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("idx_items_type", "item_type"),

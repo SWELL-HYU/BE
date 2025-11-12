@@ -25,7 +25,7 @@ class User(Base):
         comment="사용자 성별",
     )
     preferred_tags = Column(Text, comment="사용자 선호 태그 (콤마 구분 텍스트)")
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # 종속 엔티티들과의 양방향 관계 설정
     fitting_results = relationship(

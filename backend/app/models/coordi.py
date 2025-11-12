@@ -28,7 +28,7 @@ class Coordi(Base):
         comment="코디 대상 성별",
     )
     description = Column(Text, comment="태그 포함 설명 문구")
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
         Index("idx_coordis_season_style", "season", "style"),

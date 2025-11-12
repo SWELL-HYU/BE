@@ -66,3 +66,57 @@ backend/
 ├── requirements.txt     # 의존성 목록
 ├── docker-compose.yml   # PostgreSQL 전용 컴포즈
 ```
+
+## 🧭 Alembic 사용 가이드
+
+1. **의존성 설치**
+   ```bash
+   pip install alembic
+   pip install psycopg2-binary  # PostgreSQL 드라이버가 없다면 추가
+   pip freeze | grep alembic    # 설치 확인
+   ```
+
+2. **초기 시작 명령어**
+   ```bash
+   alembic init migrations
+   ```
+   `alembic.ini`와 `migrations/` 디렉터리가 생성됩니다.
+
+3. **`env.py` 수정**
+   - 모듈 경로 추가 및 Base, DB URL 로드  
+     ```python
+```1:13:backend/migrations/env.py
+from logging.config import fileConfig
+import sys
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.append(str(BASE_DIR))
+
+from app.db.database import Base, DATABASE_URL
+from app.models import *
+```
+   - 메타데이터와 DB URL 주입  
+     ```python
+```28:29:backend/migrations/env.py
+target_metadata = Base.metadata
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
+```
+
+4. **리비전 생성**
+   ```bash
+   alembic revision --autogenerate -m "add timezone-aware timestamps"
+   ```
+   생성된 스크립트의 `upgrade()`/`downgrade()` 내용을 반드시 검토하세요.
+
+5. **마이그레이션 적용**
+   ```bash
+   alembic upgrade head
+   ```
+   특정 버전으로 이동하려면 `alembic upgrade <revision_id>`를 사용할 수 있습니다.
+
+6. **주의사항**
+   - 생성된 리비전 파일을 커밋하기 전에 불필요한 `drop_table` 등 파괴적인 명령이 없는지 확인합니다.
+   - 이미 스키마가 있는 DB에 Alembic을 도입할 때는 빈 리비전으로 `alembic stamp head`를 수행해 베이스라인을 맞춘 뒤 사용하세요.
+   - 운영 DB URL을 사용하는 경우 `env.py`의 `DATABASE_URL`이 정확한지 재검토 후 `alembic upgrade head`를 실행하세요.
+   - `migrations/__pycache__/`나 `versions/*.pyc` 등은 Git에 포함하지 않습니다 (`.gitignore` 참고).

@@ -58,6 +58,10 @@ htmlcov/
 .dmypy.json
 dmypy.json
 
+# Alembic
+migrations/__pycache__/
+migrations/versions/*.pyc
+
 # Secrets
 secrets/
 *.pem

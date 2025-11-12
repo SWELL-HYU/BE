@@ -30,7 +30,7 @@ class ItemImage(Base):
         server_default="false",
         comment="대표 썸네일 여부",
     )
-    created_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (Index("idx_item_images_item", "item_id", "is_main"),)
 
