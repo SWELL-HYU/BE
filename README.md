@@ -1,2 +1,2 @@
-# HCI_RecFashion
-Fashion Recommendation Application for HCI Lecture in HYU
+# SWELL
+Fashion Recommendation Web Apllication.

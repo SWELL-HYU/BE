@@ -3,7 +3,6 @@
 FastAPI 기반 추천 시스템 백엔드.
 
 ## 📋 사전 요구사항
-
 - **Python 3.11(필수!)**
 - **pip** / **venv**
 - **Docker & Docker Compose** (PostgreSQL 컨테이너용)
