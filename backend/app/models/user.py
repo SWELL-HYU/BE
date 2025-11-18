@@ -4,7 +4,7 @@
 `Users` 테이블과 1:N 관계를 맺는 종속 엔티티와의 연동을 담당한다.
 """
 
-from sqlalchemy import BigInteger, Column, DateTime, Enum, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, String
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -24,7 +24,12 @@ class User(Base):
         Enum("male", "female", name="user_gender_enum"),
         comment="사용자 성별",
     )
-    preferred_tags = Column(Text, comment="사용자 선호 태그 (JSON 배열 형식으로 저장)")
+    has_completed_onboarding = Column(
+        Boolean,
+        nullable=False,
+        server_default="false",
+        comment="온보딩(선호도 설정) 완료 여부",
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # 종속 엔티티들과의 양방향 관계 설정
@@ -60,6 +65,12 @@ class User(Base):
     )
     item_view_logs = relationship(
         "UserItemViewLog",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
+    preferred_tags = relationship(
+        "UserPreferredTag",
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,
