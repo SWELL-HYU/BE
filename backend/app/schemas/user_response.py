@@ -18,6 +18,23 @@ class PreferredTagPayload(BaseModel):
     name: str
 
 
+class HashtagOptionPayload(BaseModel):
+    """해시태그 옵션 페이로드."""
+    id: int
+    name: str
+
+
+class SampleOutfitOptionPayload(BaseModel):
+    """예시 코디 옵션 페이로드."""
+    id: int
+    image_url: str = Field(alias="imageUrl")
+    style: Optional[str] = None
+    season: Optional[str] = None
+
+    class Config:
+        populate_by_name = True
+
+
 class PreferredCoordiPayload(BaseModel):
     """선호 코디 페이로드."""
     id: int
@@ -93,5 +110,72 @@ class MeResponseData(BaseModel):
 class MeResponse(BaseModel):
     success: bool = True
     data: MeResponseData
+
+# 선호도 설정 옵션 응답 데이터 스키마 1
+class PreferencesOptionsResponseData(BaseModel):
+    hashtags: List[HashtagOptionPayload]
+    sample_outfits: List[SampleOutfitOptionPayload] = Field(alias="sampleOutfits")
+
+    class Config:
+        populate_by_name = True
+
+# 선호도 설정 옵션 응답 데이터 스키마 2
+class PreferencesOptionsResponse(BaseModel):
+    success: bool = True
+    data: PreferencesOptionsResponseData
+
+
+# 선호도 설정 응답 데이터 스키마 1
+class PreferencesResponseUser(BaseModel):
+    """선호도 설정 응답의 사용자 정보."""
+    id: int
+    has_completed_onboarding: bool = Field(alias="hasCompletedOnboarding")
+
+    class Config:
+        populate_by_name = True
+
+
+# 선호도 설정 응답 데이터 스키마 2
+class PreferencesResponseData(BaseModel):
+    message: str
+    user: PreferencesResponseUser
+
+
+# 선호도 설정 응답 데이터 스키마 3
+class PreferencesResponse(BaseModel):
+    success: bool = True
+    data: PreferencesResponseData
+
+
+# 프로필 사진 업로드 응답 데이터 스키마 1
+class ProfilePhotoUploadResponseData(BaseModel):
+    """프로필 사진 업로드 응답 데이터."""
+    photo_url: str = Field(alias="photoUrl")
+    created_at: datetime = Field(alias="createdAt")
+
+    class Config:
+        populate_by_name = True
+
+
+# 프로필 사진 업로드 응답 데이터 스키마 2
+class ProfilePhotoUploadResponse(BaseModel):
+    success: bool = True
+    data: ProfilePhotoUploadResponseData
+
+
+# 프로필 사진 삭제 응답 데이터 스키마 1
+class ProfilePhotoDeleteResponseData(BaseModel):
+    """프로필 사진 삭제 응답 데이터."""
+    message: str
+    deleted_at: datetime = Field(alias="deletedAt")
+
+    class Config:
+        populate_by_name = True
+
+
+# 프로필 사진 삭제 응답 데이터 스키마 2
+class ProfilePhotoDeleteResponse(BaseModel):
+    success: bool = True
+    data: ProfilePhotoDeleteResponseData
 
 

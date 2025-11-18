@@ -479,8 +479,372 @@ HCI Fashion API
 
 ---
 
+## 2. 사용자 (Users)
+
+### 2.1 사용자 선호도 설정 옵션 제공
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{api_base}}/users/preferences/options`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "hashtags": [
+      {
+        "id": 1,
+        "name": "#캐주얼"
+      },
+      {
+        "id": 2,
+        "name": "#미니멀"
+      },
+      {
+        "id": 3,
+        "name": "#스트리트"
+      },
+      {
+        "id": 4,
+        "name": "#스포티"
+      },
+      {
+        "id": 5,
+        "name": "#편안한"
+      },
+      {
+        "id": 6,
+        "name": "#데일리룩"
+      },
+      {
+        "id": 7,
+        "name": "#오피스룩"
+      },
+      {
+        "id": 8,
+        "name": "#데이트룩"
+      }
+    ],
+    "sampleOutfits": [
+      {
+        "id": 1438474944176932480,
+        "imageUrl": "https://image.msscdn.net/...",
+        "style": "casual",
+        "season": "winter"
+      },
+      {
+        "id": 1438291847265123456,
+        "imageUrl": "https://image.msscdn.net/...",
+        "style": "minimal",
+        "season": "fall"
+      }
+    ]
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스**
+   - 유효한 토큰으로 요청
+   - Expected: 200 OK, hashtags 배열과 sampleOutfits 배열 반환
+   - hashtags는 모든 태그를 포함 (ID 순으로 정렬)
+   - sampleOutfits는 최대 20개의 예시 코디를 포함 (ID 순으로 정렬)
+---
+
+### 2.2 사용자 선호도 설정
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{api_base}}/users/preferences`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "hashtagIds": [1, 2, 3],
+    "sampleOutfitIds": [1438474944176932480, 1438291847265123456, 1438108750352345678, 1437925653440567890, 1437742556523789012]
+  }
+  ```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "선호도가 저장되었습니다",
+    "user": {
+      "id": 1,
+      "hasCompletedOnboarding": true
+    }
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스**
+   - 유효한 토큰으로 요청
+   - hashtagIds: 3-10개 (예: [1, 2, 3])
+   - sampleOutfitIds: 정확히 5개 (예: [1, 2, 3, 4, 5])
+   - Expected: 200 OK, success와 message, user 객체 반환
+   - hasCompletedOnboarding이 true로 변경됨
+
+2. **해시태그 부족 (400 Bad Request)**
+   - hashtagIds: [1, 2] (2개만)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INSUFFICIENT_HASHTAGS",
+         "message": "최소 3개의 해시태그를 선택해야 합니다"
+       }
+     }
+     ```
+
+3. **해시태그 초과 (400 Bad Request)**
+   - hashtagIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11] (11개)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "TOO_MANY_HASHTAGS",
+         "message": "최대 10개의 해시태그만 선택할 수 있습니다"
+       }
+     }
+     ```
+
+4. **코디 개수 부족 (400 Bad Request)**
+   - sampleOutfitIds: [1, 2, 3, 4] (4개만)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INSUFFICIENT_OUTFITS",
+         "message": "정확히 5개의 코디를 선택해야 합니다"
+       }
+     }
+     ```
+
+5. **코디 개수 초과 (400 Bad Request)**
+   - sampleOutfitIds: [1, 2, 3, 4, 5, 6] (6개)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "TOO_MANY_OUTFITS",
+         "message": "정확히 5개의 코디를 선택해야 합니다"
+       }
+     }
+     ```
+
+6. **유효하지 않은 해시태그 ID (400 Bad Request)**
+   - hashtagIds: [1, 2, 99999] (존재하지 않는 ID 포함)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INVALID_HASHTAG_ID",
+         "message": "유효하지 않은 해시태그 ID가 포함되어 있습니다"
+       }
+     }
+     ```
+
+7. **유효하지 않은 코디 ID (400 Bad Request)**
+   - sampleOutfitIds: [1, 2, 3, 4, 99999] (존재하지 않는 ID 포함)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INVALID_OUTFIT_ID",
+         "message": "유효하지 않은 코디 ID가 포함되어 있습니다"
+       }
+     }
+     ```
+
+8. **중복된 해시태그 ID (400 Bad Request)**
+   - hashtagIds: [1, 2, 2] (중복 포함)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "DUPLICATE_ID",
+         "message": "중복된 ID가 포함되어 있습니다"
+       }
+     }
+     ```
+
+9. **중복된 코디 ID (400 Bad Request)**
+   - sampleOutfitIds: [1, 2, 3, 4, 4] (중복 포함)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "DUPLICATE_ID",
+         "message": "중복된 ID가 포함되어 있습니다"
+       }
+     }
+     ```
+---
+
+### 2.3 프로필 사진 업로드
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{api_base}}/users/profile-photo`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: multipart/form-data
+  ```
+- **Body:**
+  - 탭: `Body` 선택
+  - 타입: `form-data` 선택
+  - Key: `photo` 입력
+  - Key 옆 드롭다운: `File` 선택 (기본값은 `Text`)
+  - Value: `Select Files` 버튼 클릭하여 JPG 또는 PNG 파일 선택 (최대 10MB)
+  
+  **Postman 설정 예시:**
+  ```
+  Body 탭 → form-data 선택
+  Key: photo [File 타입으로 변경]
+  Value: [Select Files] 버튼 클릭 → 파일 선택
+  ```
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "photoUrl": "/uploads/users/1/profile_550e8400e29b41d4.jpg",
+    "createdAt": "2025-11-16T10:00:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - JPG 파일**
+   - 유효한 토큰으로 요청
+   - photo: JPG 파일 (10MB 이하)
+   - Expected: 200 OK, photoUrl과 createdAt 반환
+
+2. **성공 케이스 - PNG 파일**
+   - 유효한 토큰으로 요청
+   - photo: PNG 파일 (10MB 이하)
+   - Expected: 200 OK, photoUrl과 createdAt 반환
+
+3. **기존 프로필 사진 교체**
+   - 유효한 토큰으로 요청
+   - 이미 프로필 사진이 있는 사용자
+   - 새로운 사진 업로드
+   - Expected: 200 OK, 기존 사진이 새 사진으로 교체됨
+
+4. **파일 형식 오류 - GIF (400 Bad Request)**
+   - photo: GIF 파일
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INVALID_FILE_FORMAT",
+         "message": "JPG, PNG 파일만 업로드 가능합니다"
+       }
+     }
+     ```
+
+5. **파일 형식 오류 - PDF (400 Bad Request)**
+   - photo: PDF 파일
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INVALID_FILE_FORMAT",
+         "message": "JPG, PNG 파일만 업로드 가능합니다"
+       }
+     }
+     ```
+
+6. **파일 크기 초과 (400 Bad Request)**
+   - photo: 11MB 이상의 JPG/PNG 파일
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "FILE_TOO_LARGE",
+         "message": "파일 크기가 10MB를 초과했습니다"
+       }
+     }
+     ```
+
+7. **파일 없음 (400 Bad Request)**
+   - Body에서 `photo` 필드 제거
+   - Expected:
+     ```json
+    {
+        "detail": "Missing boundary in multipart."
+    }
+     ```
+---
+
+### 2.4 프로필 사진 삭제
+
+**Request:**
+- **Method:** `DELETE`
+- **URL:** `{{api_base}}/users/profile-photo`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "사진이 삭제되었습니다",
+    "deletedAt": "2025-11-16T10:00:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 사진이 있는 경우**
+   - 유효한 토큰으로 요청
+   - 프로필 사진이 있는 사용자
+   - Expected: 200 OK, message와 deletedAt 반환
+   - 파일 시스템과 DB에서 모두 삭제됨
+
+2. **성공 케이스 - 사진이 없는 경우 (Idempotent)**
+   - 유효한 토큰으로 요청
+   - 프로필 사진이 없는 사용자
+   - Expected: 200 OK, message와 deletedAt 반환
+   - 사진이 없어도 성공 응답 반환 (idempotent)
+---
+
 ## 다음 엔드포인트 추가 예정
 
-- 2.1 사용자 선호도 설정 옵션 제공
+- 3.1 개인화 추천 코디 조회
 - ... (계속 추가)
 

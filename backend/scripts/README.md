@@ -18,10 +18,17 @@ python -m scripts.load_items data/items.json
 
 ```bash
 # backend 디렉토리에서 실행
-python scripts/load_coordis.py data/coordis.json
+python scripts/load_coordis.py data/coordis_sample.json
 
 # 또는 Python 모듈로 실행
 python -m scripts.load_coordis data/coordis.json
+```
+
+### 태그 데이터 삽입
+
+```bash
+# backend 디렉토리에서 실행
+python scripts/load_tags.py data/tags_sample.json
 ```
 
 **데이터 파일 위치:**

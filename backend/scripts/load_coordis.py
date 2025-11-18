@@ -96,7 +96,7 @@ def get_or_create_item(
     item = Item(
         item_id=item_id,  # 직접 ID 지정
         item_name=name,
-        item_type=item_type,
+        category=item_type,
         brand_name_ko=brand,
         price=float(price) if price else None,
         purchase_url=purchase_url,

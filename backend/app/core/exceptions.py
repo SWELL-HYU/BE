@@ -76,6 +76,126 @@ class ItemNotFoundError(AppException):
     def __init__(self) -> None:
         super().__init__(message="아이템을 찾을 수 없습니다")
 
+# 해시태그 개수 부족 예외
+class InsufficientHashtagsError(AppException):
+    """최소 3개의 해시태그를 선택해야 할 때 발생하는 예외."""
+
+    code = "INSUFFICIENT_HASHTAGS"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="최소 3개의 해시태그를 선택해야 합니다")
+
+# 해시태그 개수 초과 예외
+class TooManyHashtagsError(AppException):
+    """최대 10개의 해시태그만 선택할 수 있을 때 발생하는 예외."""
+
+    code = "TOO_MANY_HASHTAGS"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="최대 10개의 해시태그만 선택할 수 있습니다")
+
+# 코디 개수 부족 예외
+class InsufficientOutfitsError(AppException):
+    """정확히 5개의 코디를 선택해야 할 때 발생하는 예외."""
+
+    code = "INSUFFICIENT_OUTFITS"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="정확히 5개의 코디를 선택해야 합니다")
+
+# 코디 개수 초과 예외
+class TooManyOutfitsError(AppException):
+    """정확히 5개의 코디를 선택해야 할 때 발생하는 예외."""
+
+    code = "TOO_MANY_OUTFITS"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="정확히 5개의 코디를 선택해야 합니다")
+
+# 유효하지 않은 해시태그 ID 예외
+class InvalidHashtagIdError(AppException):
+    """유효하지 않은 해시태그 ID가 포함되어 있을 때 발생하는 예외."""
+
+    code = "INVALID_HASHTAG_ID"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="유효하지 않은 해시태그 ID가 포함되어 있습니다")
+
+# 유효하지 않은 코디 ID 예외
+class InvalidOutfitIdError(AppException):
+    """유효하지 않은 코디 ID가 포함되어 있을 때 발생하는 예외."""
+
+    code = "INVALID_OUTFIT_ID"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="유효하지 않은 코디 ID가 포함되어 있습니다")
+
+# 중복된 ID 예외
+class DuplicateIdError(AppException):
+    """중복된 ID가 포함되어 있을 때 발생하는 예외."""
+
+    code = "DUPLICATE_ID"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="중복된 ID가 포함되어 있습니다")
+
+# 파일 형식 오류 예외
+class InvalidFileFormatError(AppException):
+    """JPG, PNG가 아닌 파일 형식일 때 발생하는 예외."""
+
+    code = "INVALID_FILE_FORMAT"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="JPG, PNG 파일만 업로드 가능합니다")
+
+# 파일 크기 초과 예외
+class FileTooLargeError(AppException):
+    """10MB를 초과하는 파일일 때 발생하는 예외."""
+
+    code = "FILE_TOO_LARGE"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="파일 크기가 10MB를 초과했습니다")
+
+# 파일 없음 예외
+class FileRequiredError(AppException):
+    """파일이 제공되지 않았을 때 발생하는 예외."""
+
+    code = "FILE_REQUIRED"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="파일을 선택해주세요")
+
+# 파일 업로드 실패 예외
+class UploadFailedError(AppException):
+    """파일 업로드에 실패했을 때 발생하는 예외."""
+
+    code = "UPLOAD_FAILED"
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    def __init__(self) -> None:
+        super().__init__(message="파일 업로드에 실패했습니다")
+
+# 파일 삭제 실패 예외
+class DeleteFailedError(AppException):
+    """사진 삭제에 실패했을 때 발생하는 예외."""
+
+    code = "DELETE_FAILED"
+    status_code = status.HTTP_500_INTERNAL_SERVER_ERROR
+
+    def __init__(self) -> None:
+        super().__init__(message="사진 삭제에 실패했습니다")
+
 # 커스텀 예외 핸들러 등록
 def register_exception_handlers(app: FastAPI) -> None:
     """커스텀 예외를 FastAPI 인스턴스에 바인딩."""
