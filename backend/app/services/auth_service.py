@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.core.exceptions import DuplicateEmailError, InvalidCredentialsError, UnauthorizedError, ValidationError
+from app.core.exceptions import DuplicateEmailError, InvalidCredentialsError, UnauthorizedError
 from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
 from app.models.user import User
 from app.schemas.user_request import UserCreateRequest, UserLoginRequest
@@ -29,21 +29,12 @@ def register_user(db: Session, payload: UserCreateRequest) -> User:
     if existing_user is not None:
         raise DuplicateEmailError(payload.email)
 
-    # 비밀번호 유효성 검증
-    if len(payload.password) < 8:
-        raise ValidationError(message="비밀번호는 8자 이상이어야 합니다")
-
-    # 성별 필수 검증
-    if payload.gender is None:
-        raise ValidationError(message="성별을 선택해주세요")
-
     # 사용자 생성
     user = User(
         email=payload.email, # 이메일
-        password_hash=hash_password(payload.password),
+        password_hash=hash_password(payload.password), # 비밀번호 해시
         name=payload.name, # 이름
-        gender=payload.gender.value, # 성별 (필수)
-        preferred_tags=payload.preferred_tags, # 선호 태그
+        gender=payload.gender.value, # 성별
     )
 
     # 사용자 추가

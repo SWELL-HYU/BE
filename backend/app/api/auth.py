@@ -18,6 +18,8 @@ from app.schemas.user_response import (
     LogoutResponse,
     MeResponse,
     MeResponseData,
+    PreferredCoordiPayload,
+    PreferredTagPayload,
     SignupResponse,
     SignupResponseData,
     UserPayload,
@@ -36,6 +38,43 @@ def _build_user_payload(user) -> UserPayload:
         user.images[0].image_url if getattr(user, "images", []) else None
     )
 
+    # 선호 태그 추출
+    preferred_tags = None
+    if user.preferred_tags:
+        preferred_tags = [
+            PreferredTagPayload(id=tag.tag.tag_id, name=tag.tag.name)
+            for tag in user.preferred_tags
+        ]
+
+    # 선호 코디 추출
+    preferred_coordis = None
+    preference_interactions = [
+        interaction for interaction in user.coordi_interactions 
+        if interaction.action_type == 'preference'
+    ]
+    if preference_interactions:
+        preferred_coordis = []
+        for interaction in preference_interactions:
+            coordi = interaction.coordi
+            # 메인 이미지 찾기 (is_main=True 우선, 없으면 첫 번째 이미지)
+            main_image = next(
+                (img for img in coordi.images if img.is_main),
+                coordi.images[0] if coordi.images else None
+            )
+            main_image_url = main_image.image_url if main_image else None
+            
+            preferred_coordis.append(
+                PreferredCoordiPayload(
+                    id=coordi.coordi_id,
+                    style=coordi.style,
+                    season=coordi.season,
+                    gender=coordi.gender,
+                    description=coordi.description,
+                    mainImageUrl=main_image_url,
+                    preferredAt=interaction.interacted_at
+                )
+            )
+
     # 사용자 페이로드 생성
     return UserPayload.model_validate(
         {
@@ -44,6 +83,9 @@ def _build_user_payload(user) -> UserPayload:
             "name": user.name,
             "gender": user.gender,
             "profileImageUrl": profile_image_url,
+            "preferredTags": preferred_tags,
+            "preferredCoordis": preferred_coordis,
+            "hasCompletedOnboarding": user.has_completed_onboarding,
             "createdAt": user.created_at,
         },
         from_attributes=False,

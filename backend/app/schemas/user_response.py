@@ -5,11 +5,34 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, EmailStr, Field
 
 from app.schemas.user_request import UserGender
+
+
+class PreferredTagPayload(BaseModel):
+    """선호 태그 페이로드."""
+    id: int
+    name: str
+
+
+class PreferredCoordiPayload(BaseModel):
+    """선호 코디 페이로드."""
+    id: int
+    style: Optional[str] = None
+    season: Optional[str] = None
+    gender: Optional[str] = None
+    description: Optional[str] = None
+    main_image_url: Optional[str] = Field(
+        default=None,
+        alias="mainImageUrl",
+    )
+    preferred_at: datetime = Field(alias="preferredAt")
+
+    class Config:
+        populate_by_name = True
 
 
 class UserPayload(BaseModel):
@@ -21,6 +44,15 @@ class UserPayload(BaseModel):
         default=None,
         alias="profileImageUrl",
     )
+    preferred_tags: Optional[List[PreferredTagPayload]] = Field(
+        default=None,
+        alias="preferredTags",
+    )
+    preferred_coordis: Optional[List[PreferredCoordiPayload]] = Field(
+        default=None,
+        alias="preferredCoordis",
+    )
+    has_completed_onboarding: bool = Field(alias="hasCompletedOnboarding")
     created_at: datetime = Field(alias="createdAt")
 
     class Config:

@@ -83,9 +83,9 @@ def decode_access_token(token: str) -> Dict[str, Any]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
     except jwt.ExpiredSignatureError as exc:
-        raise UnauthorizedError(message="토큰이 만료되었습니다. 다시 로그인해주세요.") from exc
+        raise UnauthorizedError(message="토큰이 만료되었습니다") from exc
     except jwt.InvalidTokenError as exc:
-        raise UnauthorizedError(message="유효하지 않은 인증 토큰입니다.") from exc
+        raise UnauthorizedError(message="유효하지 않은 토큰입니다") from exc
 
     return payload
 
@@ -97,7 +97,7 @@ def extract_bearer_token(authorization_header: str) -> str:
 
     scheme, _, token = authorization_header.partition(" ")
     if scheme.lower() != "bearer" or not token:
-        raise UnauthorizedError(message="유효한 Authorization 헤더가 필요합니다.")
+        raise UnauthorizedError(message="유효하지 않은 토큰 형식입니다")
     return token
 
 

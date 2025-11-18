@@ -54,7 +54,7 @@ class UnauthorizedError(AppException):
     status_code = status.HTTP_401_UNAUTHORIZED
 
     def __init__(self, *, message: Optional[str] = None) -> None:
-        super().__init__(message=message or "인증이 필요합니다.")
+        super().__init__(message=message or "인증이 필요합니다")
 
 # 요청 유효성 검증 실패 시 발생하는 예외
 class ValidationError(AppException):
@@ -89,11 +89,27 @@ def register_exception_handlers(app: FastAPI) -> None:
         for error in exc.errors():
             loc = error.get("loc", [])
             error_type = error.get("type")
-            if loc and loc[-1] == "password" and error_type == "string_too_short":
+            field_name = loc[-1] if loc else None
+            
+            # 이메일 필수값 검증
+            if field_name == "email" and error_type == "missing":
+                message = "이메일을 입력해주세요"
+                break
+            # 비밀번호 필수값 검증
+            if field_name == "password" and error_type == "missing":
+                message = "비밀번호를 입력해주세요"
+                break
+            # 비밀번호 길이 검증
+            if field_name == "password" and error_type == "string_too_short":
                 message = "비밀번호가 8자 이상이여야합니다"
                 break
-            if loc and loc[-1] == "gender" and error_type == "missing":
+            # 성별 필수 검증
+            if field_name == "gender" and error_type == "missing":
                 message = "성별을 선택해주세요"
+                break
+            # 이메일 형식 검증
+            if field_name == "email" and error_type in ("value_error", "type_error"):
+                message = "유효하지 않은 이메일 형식입니다"
                 break
 
         # ValidationError 형식으로 직접 응답 반환
