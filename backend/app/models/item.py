@@ -26,8 +26,8 @@ class Item(Base):
 
     item_id = Column(BigInteger, primary_key=True, autoincrement=True)
     item_name = Column(String(255), nullable=False)
-    item_type = Column(
-        Enum("top", "bottom", "outer", name="item_type_enum"),
+    category = Column(
+        Enum("top", "bottom", "outer", name="item_category_enum"),
         nullable=False,
     )
     brand_name_ko = Column(String(100))
@@ -36,7 +36,7 @@ class Item(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        Index("idx_items_type", "item_type"),
+        Index("idx_items_category", "category"),
         Index("idx_items_brand_ko", "brand_name_ko"),
     )
 

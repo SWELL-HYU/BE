@@ -11,6 +11,7 @@ from sqlalchemy import (
     Enum,
     ForeignKey,
     Index,
+    Text,
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -34,11 +35,25 @@ class FittingResult(Base):
             "processing",
             "completed",
             "failed",
+            "timeout",
             name="fitting_result_status_enum",
         ),
         nullable=False,
         server_default="processing",
         comment="피팅 작업 상태",
+    )
+    current_step = Column(
+        Enum("top", "bottom", "outer", name="fitting_step_enum"),
+        comment="현재 처리 단계 (processing 상태일 때)",
+    )
+    failed_step = Column(
+        Enum("top", "bottom", "outer", name="fitting_step_enum"),
+        comment="실패한 단계 (failed 상태일 때)",
+    )
+    llm_message = Column(Text, comment="LLM 평가 메시지")
+    finished_at = Column(
+        DateTime(timezone=True),
+        comment="작업 완료/실패/타임아웃 시점 (status가 completed/failed/timeout일 때)",
     )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 

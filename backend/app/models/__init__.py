@@ -8,17 +8,20 @@ from app.models.fitting_result_item import FittingResultItem
 from app.models.fitting_result_image import FittingResultImage
 from app.models.item import Item
 from app.models.item_image import ItemImage
+from app.models.tag import Tag
 from app.models.user import User
 from app.models.user_closet_item import UserClosetItem
 from app.models.user_coordi_interaction import UserCoordiInteraction
 from app.models.user_coordi_view_log import UserCoordiViewLog
 from app.models.user_image import UserImage
 from app.models.user_item_view_log import UserItemViewLog
+from app.models.user_preferred_tag import UserPreferredTag
 
 __all__ = [
     "User",
     "Item",
     "Coordi",
+    "Tag",
     "FittingResult",
     "FittingResultItem",
     "UserImage",
@@ -30,4 +33,5 @@ __all__ = [
     "UserCoordiViewLog",
     "UserClosetItem",
     "UserItemViewLog",
+    "UserPreferredTag",
 ]
