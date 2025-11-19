@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import extract_bearer_token
 from app.db.database import get_db
-from app.schemas.item_response import ItemDetailPayload, ItemDetailResponse, ItemDetailResponseData
+from app.schemas.items import ItemDetailPayload, ItemDetailResponse, ItemDetailResponseData
 from app.services.auth_service import get_user_from_token
 from app.services.item_service import get_item_by_id
 

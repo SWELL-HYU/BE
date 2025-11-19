@@ -9,11 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.core.security import extract_bearer_token
 from app.db.database import get_db
-from app.schemas.user_request import VirtualFittingRequest
-from app.schemas.user_response import (
+from app.schemas.virtual_fitting import (
     DeleteFittingHistoryResponse,
     FittingHistoryResponse,
     VirtualFittingJobStatusResponse,
+    VirtualFittingRequest,
     VirtualFittingResponse,
 )
 from app.services.auth_service import get_user_from_token

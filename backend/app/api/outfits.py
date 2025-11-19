@@ -15,12 +15,12 @@ from app.schemas.recommendation_response import (
     RecommendationsResponse,
     RecommendationsResponseData,
 )
-from app.schemas.user_request import SkipOutfitsRequest
-from app.schemas.user_response import (
+from app.schemas.outfits import (
     AddFavoriteResponse,
     AddFavoriteResponseData,
     RemoveFavoriteResponse,
     RemoveFavoriteResponseData,
+    SkipOutfitsRequest,
     SkipOutfitsResponse,
     SkipOutfitsResponseData,
 )

@@ -9,8 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.core.security import decode_access_token, extract_bearer_token
 from app.db.database import get_db
-from app.schemas.user_request import UserPreferencesRequest
-from app.schemas.user_response import (
+from app.schemas.users import (
     PreferencesOptionsResponse,
     PreferencesOptionsResponseData,
     PreferencesResponse,
@@ -20,6 +19,7 @@ from app.schemas.user_response import (
     ProfilePhotoDeleteResponseData,
     ProfilePhotoUploadResponse,
     ProfilePhotoUploadResponseData,
+    UserPreferencesRequest,
 )
 from app.services.auth_service import get_user_from_token
 from app.services.users_service import (

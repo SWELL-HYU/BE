@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.core.exceptions import DuplicateEmailError, InvalidCredentialsError, UnauthorizedError
 from app.core.security import create_access_token, decode_access_token, hash_password, verify_password
 from app.models.user import User
-from app.schemas.user_request import UserCreateRequest, UserLoginRequest
+from app.schemas.auth import UserCreateRequest, UserLoginRequest
 
 
 def register_user(db: Session, payload: UserCreateRequest) -> User:

@@ -11,17 +11,20 @@ from app.core.exceptions import UnauthorizedError
 from app.core.security import decode_access_token, extract_bearer_token
 from app.db.database import get_db
 from app.models.user import User
-from app.schemas.user_request import UserCreateRequest, UserLoginRequest
-from app.schemas.user_response import (
+from app.schemas.auth import (
     LoginResponse,
     LoginResponseData,
     LogoutResponse,
+    SignupResponse,
+    SignupResponseData,
+    UserCreateRequest,
+    UserLoginRequest,
+)
+from app.schemas.users import (
     MeResponse,
     MeResponseData,
     PreferredCoordiPayload,
     PreferredTagPayload,
-    SignupResponse,
-    SignupResponseData,
     UserPayload,
 )
 from app.services.auth_service import authenticate_user, get_user_from_token, register_user
@@ -73,7 +76,7 @@ def _build_user_payload(user) -> UserPayload:
                     mainImageUrl=main_image_url,
                     preferredAt=interaction.interacted_at
                 )
-            )
+    )
 
     # 사용자 페이로드 생성
     return UserPayload.model_validate(

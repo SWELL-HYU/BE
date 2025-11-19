@@ -45,6 +45,9 @@ docker-compose down
 ```bash
 # 가상환경이 활성화된 상태에서
 uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+# 또는 (개발용)
+fastapi run
 ```
 
 - **API**: http://localhost:8000  
@@ -56,13 +59,56 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ```
 backend/
 ├── app/
-│   ├── db/              # DB 설정 (database.py)
-│   ├── models/          # SQLAlchemy 모델
-│   ├── routers/         # API 라우터
-│   ├── schemas/         # Pydantic 스키마
-│   ├── crud/            # CRUD 작업
-│   └── services/        # 비즈니스 로직
+│   ├── api/             # API 라우터 (기능별 분리)
+│   │   ├── auth.py      # 인증 (회원가입, 로그인, 로그아웃)
+│   │   ├── users.py     # 사용자 (프로필, 선호도 설정)
+│   │   ├── items.py     # 아이템 상세 조회
+│   │   ├── recommendations.py  # 개인화 추천 코디
+│   │   ├── outfits.py   # 코디 목록 조회, 좋아요, 스킵
+│   │   ├── closet.py    # 옷장 (아이템 저장/조회/삭제)
+│   │   └── virtual_fitting.py  # 가상 피팅
+│   ├── core/            # 핵심 설정 및 유틸리티
+│   │   ├── exceptions.py    # 커스텀 예외 처리
+│   │   ├── security.py      # JWT 인증/인가
+│   │   └── file_utils.py    # 파일 업로드 유틸리티
+│   ├── db/              # DB 설정
+│   │   └── database.py  # 데이터베이스 연결
+│   ├── models/          # SQLAlchemy ORM 모델
+│   │   ├── user.py, coordi.py, item.py 등
+│   ├── schemas/         # Pydantic 스키마 (기능별 분리)
+│   │   ├── common.py    # 공통 스키마 (PaginationPayload)
+│   │   ├── auth.py      # 인증 관련
+│   │   ├── users.py     # 사용자 관련
+│   │   ├── items.py     # 아이템 관련
+│   │   ├── outfits.py   # 코디 관련
+│   │   ├── closet.py    # 옷장 관련
+│   │   ├── virtual_fitting.py  # 가상 피팅 관련
+│   │   └── recommendation_response.py  # 추천 응답
+│   ├── services/        # 비즈니스 로직 (기능별 분리)
+│   │   ├── auth_service.py
+│   │   ├── users_service.py
+│   │   ├── item_service.py
+│   │   ├── recommendations_service.py
+│   │   ├── outfits_service.py
+│   │   ├── closet_service.py
+│   │   ├── virtual_fitting_service.py
+│   │   └── llm_service.py  # LLM (Gemini) 통합
+├── data/                # 초기 데이터 (JSON)
+│   ├── final_data_complete1.json
+│   └── tags_sample.json
+├── docs/                # 문서
+│   ├── API_TEST.md      # Postman 테스트 가이드
+│   ├── CACHING_STRATEGY.md
+│   ├── LLM_IMPLEMENTATION.md
+│   └── VIRTUAL_FITTING_IMPLEMENTATION.md
+├── migrations/          # Alembic 마이그레이션
+├── scripts/             # 데이터 로딩 스크립트
+│   ├── load_coordis.py
+│   └── load_tags.py
+├── uploads/             # 업로드된 파일
+│   ├── users/           # 사용자 프로필 사진
+│   └── fitting/         # 가상 피팅 결과 이미지
 ├── main.py              # FastAPI 진입점
 ├── requirements.txt     # 의존성 목록
-├── docker-compose.yml   # PostgreSQL 전용 컴포즈
+└── docker-compose.yml   # PostgreSQL 컨테이너 설정
 ```

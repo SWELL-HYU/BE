@@ -37,8 +37,11 @@ from app.models.user import User
 from app.models.user_coordi_interaction import UserCoordiInteraction
 from app.models.user_image import UserImage
 from app.models.user_preferred_tag import UserPreferredTag
-from app.schemas.user_request import UserPreferencesRequest
-from app.schemas.user_response import HashtagOptionPayload, SampleOutfitOptionPayload
+from app.schemas.users import (
+    HashtagOptionPayload,
+    SampleOutfitOptionPayload,
+    UserPreferencesRequest,
+)
 
 logger = logging.getLogger(__name__)
 
