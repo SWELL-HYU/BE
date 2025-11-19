@@ -36,17 +36,18 @@ from app.models.fitting_result_image import FittingResultImage
 from app.models.fitting_result_item import FittingResultItem
 from app.models.item import Item
 from app.models.user_image import UserImage
-from app.schemas.user_request import FittingItemRequest, VirtualFittingRequest
-from app.schemas.recommendation_response import PaginationPayload
-from app.schemas.user_response import (
+from app.schemas.common import PaginationPayload
+from app.schemas.virtual_fitting import (
     FittingHistoryItemPayload,
     FittingHistoryPayload,
     FittingHistoryResponseData,
+    FittingItemRequest,
     VirtualFittingJobStatusCompletedPayload,
     VirtualFittingJobStatusFailedPayload,
     VirtualFittingJobStatusPayload,
     VirtualFittingJobStatusProcessingPayload,
     VirtualFittingJobStatusTimeoutPayload,
+    VirtualFittingRequest,
 )
 
 logger = logging.getLogger(__name__)

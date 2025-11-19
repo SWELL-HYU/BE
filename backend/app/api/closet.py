@@ -11,10 +11,10 @@ from sqlalchemy.orm import Session
 
 from app.core.security import extract_bearer_token
 from app.db.database import get_db
-from app.schemas.user_request import SaveClosetItemRequest
-from app.schemas.user_response import (
+from app.schemas.closet import (
     ClosetItemsResponse,
     DeleteClosetItemResponse,
+    SaveClosetItemRequest,
     SaveClosetItemResponse,
 )
 from app.services.auth_service import get_user_from_token

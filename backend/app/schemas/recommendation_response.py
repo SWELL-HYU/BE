@@ -9,6 +9,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field
 
+from app.schemas.common import PaginationPayload
+
 
 class OutfitItemPayload(BaseModel):
     """코디에 포함된 아이템 페이로드."""
@@ -39,19 +41,6 @@ class OutfitPayload(BaseModel):
     llm_message: Optional[str] = Field(default=None, alias="llmMessage")
     items: List[OutfitItemPayload]
     created_at: datetime = Field(alias="createdAt")
-
-    class Config:
-        populate_by_name = True
-
-
-class PaginationPayload(BaseModel):
-    """페이지네이션 정보 페이로드."""
-
-    current_page: int = Field(alias="currentPage")
-    total_pages: int = Field(alias="totalPages")
-    total_items: int = Field(alias="totalItems")
-    has_next: bool = Field(alias="hasNext")
-    has_prev: bool = Field(alias="hasPrev")
 
     class Config:
         populate_by_name = True

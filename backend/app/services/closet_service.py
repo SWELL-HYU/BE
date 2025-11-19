@@ -13,8 +13,8 @@ from sqlalchemy.orm import Session, selectinload
 from app.core.exceptions import AlreadySavedError, ItemNotFoundError, ItemNotInClosetError
 from app.models.item import Item
 from app.models.user_closet_item import UserClosetItem
-from app.schemas.recommendation_response import PaginationPayload
-from app.schemas.user_response import CategoryCountsPayload, ClosetItemPayload
+from app.schemas.closet import CategoryCountsPayload, ClosetItemPayload
+from app.schemas.common import PaginationPayload
 
 
 def save_closet_item(

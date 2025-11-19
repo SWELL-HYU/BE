@@ -38,4 +38,3 @@ class ItemDetailResponse(BaseModel):
     success: bool = True
     data: ItemDetailResponseData
 
-

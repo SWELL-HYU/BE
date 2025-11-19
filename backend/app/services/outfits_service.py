@@ -17,11 +17,8 @@ from app.models.item import Item
 from app.models.user_closet_item import UserClosetItem
 from app.models.user_coordi_interaction import UserCoordiInteraction
 from app.models.user_coordi_view_log import UserCoordiViewLog
-from app.schemas.recommendation_response import (
-    OutfitItemPayload,
-    OutfitPayload,
-    PaginationPayload,
-)
+from app.schemas.common import PaginationPayload
+from app.schemas.recommendation_response import OutfitItemPayload, OutfitPayload
 
 # 필터 타입 정의
 SeasonFilter = Literal["all", "spring", "summer", "fall", "winter"]
