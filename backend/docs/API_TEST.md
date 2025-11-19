@@ -843,8 +843,167 @@ HCI Fashion API
    - 사진이 없어도 성공 응답 반환 (idempotent)
 ---
 
+## 3. 추천 (Recommendations)
+
+### 3.1 개인화 추천 코디 조회
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{api_base}}/recommendations?page=1&limit=20`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Query Parameters:**
+  - `page` (optional): 페이지 번호 (기본값: 1, 최소: 1)
+  - `limit` (optional): 페이지당 개수 (기본값: 20, 최소: 1, 최대: 50)
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfits": [
+      {
+        "id": 134314134113,
+        "imageUrl": "/images/outfits/outfit_001.jpg",
+        "gender": "male",
+        "season": "summer",
+        "style": "casual",
+        "description": "편안한 여름 캐주얼",
+        "isFavorited": false,
+        "llmMessage": "여름 바다 놀러갈 때 딱이에요! ☀️",
+        "items": [
+          {
+            "id": 134314314,
+            "category": "top",
+            "brand": "유니클로",
+            "name": "린넨 반팔 셔츠",
+            "price": 39000,
+            "imageUrl": "/images/items/item_001.png",
+            "purchaseUrl": "https://www.uniqlo.com/kr/...",
+            "isSaved": false
+          },
+          {
+            "id": 13455133,
+            "category": "bottom",
+            "brand": "자라",
+            "name": "베이직 치노 팬츠",
+            "price": 49000,
+            "imageUrl": "/images/items/item_002.png",
+            "purchaseUrl": "https://www.zara.com/kr/...",
+            "isSaved": true
+          }
+        ],
+        "createdAt": "2025-10-15T10:00:00Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 10,
+      "totalItems": 95,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Expected Response (200 OK - 결과 없음):**
+```json
+{
+  "success": true,
+  "data": {
+    "outfits": [],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 0,
+      "totalItems": 0,
+      "hasNext": false,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 기본 파라미터**
+   - 유효한 토큰으로 요청
+   - Query Parameters 없음 (기본값 사용: page=1, limit=20)
+   - Expected: 200 OK, outfits 배열과 pagination 정보 반환
+   - 사용자 성별에 맞는 코디만 반환됨
+
+2. **성공 케이스 - 페이지 지정**
+   - URL: `{{api_base}}/recommendations?page=2&limit=20`
+   - Expected: 200 OK, 두 번째 페이지의 코디 반환
+
+3. **성공 케이스 - limit 조정**
+   - URL: `{{api_base}}/recommendations?page=1&limit=20`
+   - Expected: 200 OK, 20개의 코디 반환
+
+4. **성공 케이스 - 결과 없음**
+   - 모든 코디를 이미 본 사용자
+   - 또는 해당 성별의 코디가 없는 경우
+   - Expected: 200 OK, 빈 outfits 배열과 pagination 정보 반환
+
+5. **페이지 번호 오류 - 0 이하 (400 Bad Request)**
+   - URL: `{{api_base}}/recommendations?page=0`
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "페이지 번호는 1 이상이어야 합니다"
+       }
+     }
+     ```
+
+6. **페이지 번호 오류 - 음수 (400 Bad Request)**
+   - URL: `{{api_base}}/recommendations?page=-1`
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "페이지 번호는 1 이상이어야 합니다"
+       }
+     }
+     ```
+
+7. **limit 오류 - 0 이하 (400 Bad Request)**
+   - URL: `{{api_base}}/recommendations?limit=0`
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "페이지당 개수는 1 이상 50 이하여야 합니다"
+       }
+     }
+     ```
+
+8. **limit 오류 - 50 초과 (400 Bad Request)**
+   - URL: `{{api_base}}/recommendations?limit=51`
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "페이지당 개수는 1 이상 50 이하여야 합니다"
+       }
+     }
+     ```
+
+---
+
 ## 다음 엔드포인트 추가 예정
 
-- 3.1 개인화 추천 코디 조회
+- 4.1 코디 목록 조회
 - ... (계속 추가)
 

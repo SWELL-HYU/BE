@@ -29,8 +29,7 @@ from app.models.item_image import ItemImage
 CATEGORY_MAP = {
     "아우터": "outer",
     "상의": "top",
-    "바지": "bottom",
-    "스커트": "bottom",  # "바지"의 다른 표현
+    "하의": "bottom",
 }
 
 # 시즌 변환: 한국어 -> 영어

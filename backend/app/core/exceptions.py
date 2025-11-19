@@ -231,6 +231,14 @@ def register_exception_handlers(app: FastAPI) -> None:
             if field_name == "email" and error_type in ("value_error", "type_error"):
                 message = "유효하지 않은 이메일 형식입니다"
                 break
+            # 페이지 번호 검증
+            if field_name == "page" and error_type in ("greater_than_equal", "int_parsing"):
+                message = "페이지 번호는 1 이상이어야 합니다"
+                break
+            # 페이지당 개수 검증
+            if field_name == "limit" and error_type in ("greater_than_equal", "less_than_equal", "int_parsing"):
+                message = "페이지당 개수는 1 이상 50 이하여야 합니다"
+                break
 
         # ValidationError 형식으로 직접 응답 반환
         return JSONResponse(
