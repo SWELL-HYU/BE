@@ -45,3 +45,11 @@ class SkipOutfitsRequest(BaseModel):
     class Config:
         populate_by_name = True
 
+
+# 옷장에 아이템 저장 요청 스키마
+class SaveClosetItemRequest(BaseModel):
+    item_id: int = Field(alias="itemId", description="아이템 고유 ID")
+
+    class Config:
+        populate_by_name = True
+
