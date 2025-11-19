@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import List
+from typing import List, Literal
 
 from pydantic import BaseModel, EmailStr, Field
 
@@ -49,6 +49,24 @@ class SkipOutfitsRequest(BaseModel):
 # 옷장에 아이템 저장 요청 스키마
 class SaveClosetItemRequest(BaseModel):
     item_id: int = Field(alias="itemId", description="아이템 고유 ID")
+
+    class Config:
+        populate_by_name = True
+
+
+# 가상 피팅 아이템 요청 스키마
+class FittingItemRequest(BaseModel):
+    item_id: int = Field(alias="itemId", description="아이템 고유 ID")
+    category: Literal["top", "bottom", "outer"] = Field(description="아이템 카테고리")
+    image_url: str = Field(alias="imageUrl", description="아이템 이미지 URL")
+
+    class Config:
+        populate_by_name = True
+
+
+# 가상 피팅 시작 요청 스키마
+class VirtualFittingRequest(BaseModel):
+    items: List[FittingItemRequest] = Field(min_length=1, max_length=3, description="피팅할 아이템 목록")
 
     class Config:
         populate_by_name = True

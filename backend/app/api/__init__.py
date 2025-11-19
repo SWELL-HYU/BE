@@ -6,6 +6,7 @@ from app.api.items import router as items_router
 from app.api.outfits import router as outfits_router
 from app.api.recommendations import router as recommendations_router
 from app.api.users import router as users_router
+from app.api.virtual_fitting import router as virtual_fitting_router
 
 api_router = APIRouter()
 
@@ -26,6 +27,9 @@ api_router.include_router(outfits_router)
 
 # 옷장 관련 라우터
 api_router.include_router(closet_router)
+
+# 가상 피팅 관련 라우터
+api_router.include_router(virtual_fitting_router)
 
 __all__ = ["api_router"]
 

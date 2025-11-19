@@ -1816,6 +1816,469 @@ HCI Fashion API
 
 ---
 
+## 6. 가상 피팅 (Virtual Fitting)
+
+### 6.1 가상 피팅 시작
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{api_base}}/virtual-fitting`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "items": [
+      {
+        "itemId": 5562350,
+        "category": "outer",
+        "imageUrl": "https://image.msscdn.net/thumbnails/images/goods_img/20251001/5562350/5562350_17593827444982_500.jpg"
+      },
+      {
+        "itemId": 5195037,
+        "category": "top",
+        "imageUrl": "https://image.msscdn.net/thumbnails/images/goods_img/20250619/5195037/5195037_17586944462519_500.jpg"
+      }
+    ]
+  }
+  ```
+  
+  **Note:**
+  - 사용자 사진은 `UserImage` 테이블에서 자동으로 조회됩니다.
+  - 사진이 업로드되지 않은 경우 `PHOTO_REQUIRED` 에러가 발생합니다.
+
+**Expected Response (202 Accepted):**
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": 1234,
+    "status": "processing",
+    "createdAt": "2025-11-16T10:00:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 가상 피팅 시작 (1개 아이템)**
+   - 유효한 토큰으로 요청
+   - 사용자 사진이 `UserImage` 테이블에 존재해야 함
+   - items: 1개 아이템 (category: "top")
+   - Expected: 202 Accepted, jobId, status="processing", createdAt 반환
+   - `FittingResult` 레코드 생성됨 (status="processing")
+   - `FittingResultItem` 레코드 생성됨
+
+2. **성공 케이스 - 가상 피팅 시작 (3개 아이템)**
+   - items: 3개 아이템 (top, bottom, outer 각 1개)
+   - Expected: 202 Accepted, jobId 반환
+   - 각 카테고리별로 1개씩만 포함
+
+3. **사진 없음 (400 Bad Request)**
+   - `UserImage` 테이블에 사용자 사진이 없는 경우
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "PHOTO_REQUIRED",
+         "message": "가상 피팅을 위해 먼저 사진을 업로드해주세요"
+       }
+     }
+     ```
+
+4. **중복 카테고리 (400 Bad Request)**
+   - items: top 카테고리 아이템 2개
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "DUPLICATE_CATEGORY",
+         "message": "동일한 카테고리의 아이템이 중복되었습니다"
+       }
+     }
+     ```
+
+5. **아이템 개수 초과 - 전체 (400 Bad Request)**
+   - items: 4개 이상의 아이템
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "TOO_MANY_ITEMS",
+         "message": "최대 3개의 아이템만 선택할 수 있습니다"
+       }
+     }
+     ```
+
+6. **아이템 개수 초과 - 카테고리당 (400 Bad Request)**
+   - items: top 카테고리 아이템 2개 (다른 카테고리와 함께)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "TOO_MANY_ITEMS",
+         "message": "각 카테고리당 최대 1개씩만 선택할 수 있습니다"
+       }
+     }
+     ```
+
+7. **아이템 부족 (400 Bad Request)**
+   - items: 빈 배열
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INSUFFICIENT_ITEMS",
+         "message": "최소 1개 이상의 아이템을 선택해주세요"
+       }
+     }
+     ```
+
+8. **유효하지 않은 카테고리 (400 Bad Request)**
+   - items[].category: "invalid"
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INVALID_CATEGORY",
+         "message": "유효하지 않은 카테고리입니다. (top, bottom, outer 중 하나를 선택해주세요)"
+       }
+     }
+     ```
+
+9. **유효하지 않은 아이템 ID (400 Bad Request)**
+   - items[].itemId: 존재하지 않는 아이템 ID (예: 999999999999)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "INVALID_ITEM_ID",
+         "message": "유효하지 않은 아이템 ID가 포함되어 있습니다"
+       }
+     }
+     ```
+
+10. **items 필수값 누락 (400 Bad Request)**
+    - Body에서 `items` 필드 제거
+    - Expected:
+      ```json
+      {
+        "success": false,
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "피팅할 아이템 목록을 입력해주세요"
+        }
+      }
+      ```
+
+---
+
+### 6.2 가상 피팅 상태 조회
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{api_base}}/virtual-fitting/1234`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Path Parameters:**
+  - `jobId` (integer, required): 피팅 작업 고유 ID (6.1에서 반환된 jobId)
+
+**Expected Response (200 OK):**
+
+상태에 따라 다른 응답 구조를 반환합니다:
+
+**1. Processing 상태:**
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": 1234,
+    "status": "processing",
+    "currentStep": "top"
+  }
+}
+```
+
+**2. Completed 상태:**
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": 1234,
+    "status": "completed",
+    "resultImageUrl": "/uploads/fitting/fitting_1234_20251116_100000.png",
+    "llmMessage": "이 코디는 캐주얼한 스타일로 일상복으로 착용하기 좋습니다.",
+    "completedAt": "2025-11-16T10:05:30Z",
+    "processingTime": 330
+  }
+}
+```
+
+**3. Failed 상태:**
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": 1234,
+    "status": "failed",
+    "error": "상의 피팅 중 오류가 발생했습니다",
+    "failedStep": "top",
+    "failedAt": "2025-11-16T10:02:15Z"
+  }
+}
+```
+
+**4. Timeout 상태:**
+```json
+{
+  "success": true,
+  "data": {
+    "jobId": 1234,
+    "status": "timeout",
+    "error": "처리 시간을 초과했습니다 (300초)",
+    "timeoutAt": "2025-11-16T10:05:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - Processing 상태 조회**
+   - 유효한 토큰으로 요청
+   - jobId: 6.1에서 반환된 jobId
+   - 작업이 아직 진행 중인 경우
+   - Expected: 200 OK, status="processing", currentStep 반환
+   - currentStep은 "top", "bottom", "outer" 중 하나
+
+2. **성공 케이스 - Completed 상태 조회**
+   - 작업이 완료된 경우
+   - Expected: 200 OK, status="completed", resultImageUrl, llmMessage, completedAt, processingTime 반환
+   - resultImageUrl은 유효한 이미지 경로
+   - llmMessage는 문자열 또는 null (null인 경우 "메시지 생성 중 오류가 발생했습니다"로 대체)
+   - processingTime은 초 단위 정수
+
+3. **성공 케이스 - Completed 상태 (llmMessage null)**
+   - LLM 메시지 생성 실패한 경우
+   - Expected: 200 OK, llmMessage="메시지 생성 중 오류가 발생했습니다"
+
+4. **성공 케이스 - Failed 상태 조회**
+   - 작업이 실패한 경우
+   - Expected: 200 OK, status="failed", error, failedStep, failedAt 반환
+   - error는 동적으로 생성된 메시지 (예: "상의 피팅 중 오류가 발생했습니다")
+   - failedStep은 "top", "bottom", "outer" 중 하나
+
+5. **성공 케이스 - Timeout 상태 조회**
+   - 작업이 타임아웃된 경우
+   - Expected: 200 OK, status="timeout", error, timeoutAt 반환
+   - error는 "처리 시간을 초과했습니다 (300초)" 형식
+
+6. **작업 없음 (404 Not Found)**
+   - jobId: 존재하지 않는 작업 ID (예: 999999999999)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "FITTING_JOB_NOT_FOUND",
+         "message": "가상 피팅 작업을 찾을 수 없습니다"
+       }
+     }
+     ```
+
+7. **권한 없음 (403 Forbidden)**
+   - jobId: 다른 사용자의 작업 ID
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "FORBIDDEN",
+         "message": "다른 사용자의 작업에 접근할 수 없습니다"
+       }
+     }
+     ```
+---
+
+### 6.3 가상 피팅 이력 조회
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{api_base}}/virtual-fitting`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Query Parameters:**
+  - `page` (integer, optional, default 1): 페이지 번호
+  - `limit` (integer, optional, default 20): 페이지당 개수
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "fittings": [
+      {
+        "jobId": 1234,
+        "status": "completed",
+        "resultImageUrl": "/uploads/fitting/fitting_1234_20251116_100000.png",
+        "items": [
+          {
+            "itemId": 1234,
+            "category": "top",
+            "name": "린넨 반팔 셔츠"
+          },
+          {
+            "itemId": 1235,
+            "category": "bottom",
+            "name": "베이직 치노 팬츠"
+          }
+        ],
+        "createdAt": "2025-11-09T20:00:00Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 3,
+      "totalItems": 25,
+      "hasNext": true,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Expected Response (200 OK - 결과 없음):**
+```json
+{
+  "success": true,
+  "data": {
+    "fittings": [],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 0,
+      "totalItems": 0,
+      "hasNext": false,
+      "hasPrev": false
+    }
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 기본 파라미터 (전체 이력)**
+   - 유효한 토큰으로 요청
+   - Query Parameters 없음 (기본값 사용: page=1, limit=20)
+   - Expected: 200 OK, fittings 배열, pagination 반환
+   - 생성 일시 기준 최신순으로 정렬됨
+
+2. **성공 케이스 - 페이지 지정**
+   - URL: `{{api_base}}/virtual-fitting?page=2&limit=20`
+   - Expected: 200 OK, 두 번째 페이지의 이력 반환
+
+3. **성공 케이스 - limit 조정**
+   - URL: `{{api_base}}/virtual-fitting?page=1&limit=10`
+   - Expected: 200 OK, 10개의 이력 반환
+
+4. **성공 케이스 - 결과 없음 (이력이 없는 경우)**
+   - 가상 피팅 이력이 없는 사용자
+   - Expected: 200 OK, 빈 fittings 배열과 pagination 반환
+   - 모든 pagination 값이 0 또는 false
+
+5. **성공 케이스 - 생성 일시 기준 정렬 확인**
+   - 여러 가상 피팅 작업 수행 (시간 간격을 두고)
+   - Expected: 가장 최근에 생성한 작업이 첫 번째로 반환됨
+
+6. **성공 케이스 - completed 상태의 resultImageUrl 포함**
+   - status="completed"인 이력
+   - Expected: resultImageUrl이 유효한 이미지 경로로 반환됨
+
+7. **성공 케이스 - failed/timeout 상태의 resultImageUrl null**
+   - status="failed" 또는 "timeout"인 이력
+   - Expected: resultImageUrl이 null로 반환됨
+
+8. **성공 케이스 - 아이템 정보 포함 확인**
+   - 각 fitting에 items 배열이 포함됨
+   - Expected: itemId, category, name이 올바르게 반환됨
+
+---
+
+### 6.4 가상 피팅 이력 삭제
+
+**Request:**
+- **Method:** `DELETE`
+- **URL:** `{{api_base}}/virtual-fitting/1234`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Path Parameters:**
+  - `jobId` (integer, required): 가상 피팅 작업 고유 ID
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "가상 피팅 이력이 삭제되었습니다",
+    "deletedAt": "2025-11-19T10:30:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 가상 피팅 이력 삭제**
+   - 유효한 토큰으로 요청
+   - jobId: 현재 사용자가 생성한 가상 피팅 작업 ID
+   - Expected: 200 OK, message와 deletedAt 반환
+   - `FittingResult` 테이블에서 레코드 삭제됨
+   - `FittingResultItem`, `FittingResultImage` 테이블에서도 관련 레코드 삭제됨 (CASCADE)
+   - 결과 이미지 파일도 파일 시스템에서 삭제됨
+   - 삭제 후 GET /api/virtual-fitting 호출 시 해당 이력이 목록에서 제외됨
+
+2. **작업 없음 (404 Not Found)**
+   - jobId: 존재하지 않는 작업 ID (예: 999999999999)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "FITTING_JOB_NOT_FOUND",
+         "message": "가상 피팅 작업을 찾을 수 없습니다"
+       }
+     }
+     ```
+
+3. **권한 없음 (403 Forbidden)**
+   - jobId: 다른 사용자가 생성한 작업 ID
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "FORBIDDEN",
+         "message": "다른 사용자의 작업에 접근할 수 없습니다"
+       }
+     }
+     ```
+
+---
+
 ## 다음 엔드포인트 추가 예정
 
 - ... (계속 추가)

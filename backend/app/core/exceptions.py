@@ -126,6 +126,79 @@ class ItemNotInClosetError(AppException):
     def __init__(self) -> None:
         super().__init__(message="옷장에 저장되지 않은 상품입니다")
 
+# 가상 피팅 관련 예외
+class PhotoRequiredError(AppException):
+    """가상 피팅을 위해 사진이 필요할 때 발생하는 예외."""
+
+    code = "PHOTO_REQUIRED"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="가상 피팅을 위해 먼저 사진을 업로드해주세요")
+
+class DuplicateCategoryError(AppException):
+    """동일한 카테고리의 아이템이 중복되었을 때 발생하는 예외."""
+
+    code = "DUPLICATE_CATEGORY"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="동일한 카테고리의 아이템이 중복되었습니다")
+
+class TooManyItemsError(AppException):
+    """아이템 개수가 초과되었을 때 발생하는 예외."""
+
+    code = "TOO_MANY_ITEMS"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self, message: str = "각 카테고리당 최대 1개씩만 선택할 수 있습니다") -> None:
+        super().__init__(message=message)
+
+class InsufficientItemsError(AppException):
+    """아이템 개수가 부족할 때 발생하는 예외."""
+
+    code = "INSUFFICIENT_ITEMS"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="최소 1개 이상의 아이템을 선택해주세요")
+
+class InvalidCategoryError(AppException):
+    """유효하지 않은 카테고리일 때 발생하는 예외."""
+
+    code = "INVALID_CATEGORY"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="유효하지 않은 카테고리입니다. (top, bottom, outer 중 하나를 선택해주세요)")
+
+class InvalidItemIdError(AppException):
+    """유효하지 않은 아이템 ID가 포함되었을 때 발생하는 예외."""
+
+    code = "INVALID_ITEM_ID"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="유효하지 않은 아이템 ID가 포함되어 있습니다")
+
+class FittingJobNotFoundError(AppException):
+    """가상 피팅 작업을 찾을 수 없을 때 발생하는 예외."""
+
+    code = "FITTING_JOB_NOT_FOUND"
+    status_code = status.HTTP_404_NOT_FOUND
+
+    def __init__(self) -> None:
+        super().__init__(message="가상 피팅 작업을 찾을 수 없습니다")
+
+class ForbiddenError(AppException):
+    """다른 사용자의 작업에 접근할 수 없을 때 발생하는 예외."""
+
+    code = "FORBIDDEN"
+    status_code = status.HTTP_403_FORBIDDEN
+
+    def __init__(self) -> None:
+        super().__init__(message="다른 사용자의 작업에 접근할 수 없습니다")
+
 # 해시태그 개수 부족 예외
 class InsufficientHashtagsError(AppException):
     """최소 3개의 해시태그를 선택해야 할 때 발생하는 예외."""
@@ -316,6 +389,21 @@ def register_exception_handlers(app: FastAPI) -> None:
             # category 값 검증
             if field_name == "category" and error_type in ("literal_error", "type_error"):
                 message = "유효하지 않은 category 값입니다. (all, top, bottom, outer 중 하나를 선택해주세요)"
+                break
+            # userPhotoUrl 필수값 검증
+            if field_name in ("userPhotoUrl", "user_photo_url") and error_type == "missing":
+                message = "사용자 사진 URL을 입력해주세요"
+                break
+            # items 필수값 검증
+            if field_name == "items" and error_type == "missing":
+                message = "피팅할 아이템 목록을 입력해주세요"
+                break
+            # items 배열 길이 검증
+            if field_name == "items" and error_type == "list_too_short":
+                message = "최소 1개 이상의 아이템을 선택해주세요"
+                break
+            if field_name == "items" and error_type == "list_too_long":
+                message = "최대 3개의 아이템만 선택할 수 있습니다"
                 break
 
         # ValidationError 형식으로 직접 응답 반환
