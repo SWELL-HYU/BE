@@ -74,7 +74,7 @@ class ItemNotFoundError(AppException):
     status_code = status.HTTP_404_NOT_FOUND
 
     def __init__(self) -> None:
-        super().__init__(message="아이템을 찾을 수 없습니다")
+        super().__init__(message="상품을 찾을 수 없습니다")
 
 # 코디 없음 예외
 class OutfitNotFoundError(AppException):
@@ -105,6 +105,26 @@ class FavoriteNotFoundError(AppException):
 
     def __init__(self) -> None:
         super().__init__(message="좋아요하지 않은 코디입니다")
+
+# 이미 옷장에 저장된 아이템 예외
+class AlreadySavedError(AppException):
+    """이미 옷장에 저장된 아이템을 다시 저장할 때 발생하는 예외."""
+
+    code = "ALREADY_SAVED"
+    status_code = status.HTTP_409_CONFLICT
+
+    def __init__(self) -> None:
+        super().__init__(message="이미 옷장에 저장된 아이템입니다")
+
+# 옷장에 저장되지 않은 아이템을 삭제하려고 할 때 발생하는 예외
+class ItemNotInClosetError(AppException):
+    """옷장에 저장되지 않은 아이템을 삭제하려고 할 때 발생하는 예외."""
+
+    code = "ITEM_NOT_IN_CLOSET"
+    status_code = status.HTTP_404_NOT_FOUND
+
+    def __init__(self) -> None:
+        super().__init__(message="옷장에 저장되지 않은 상품입니다")
 
 # 해시태그 개수 부족 예외
 class InsufficientHashtagsError(AppException):
@@ -284,6 +304,18 @@ def register_exception_handlers(app: FastAPI) -> None:
             # outfitIds 빈 배열 검증
             if field_name in ("outfitIds", "outfit_ids") and error_type in ("list_too_short", "value_error"):
                 message = "outfitIds는 최소 1개 이상이어야 합니다"
+                break
+            # itemId 필수값 검증
+            if field_name in ("itemId", "item_id") and error_type == "missing":
+                message = "아이템 ID를 입력해주세요"
+                break
+            # itemId 형식 검증
+            if field_name in ("itemId", "item_id") and error_type in ("int_parsing", "type_error"):
+                message = "유효하지 않은 아이템 ID 형식입니다"
+                break
+            # category 값 검증
+            if field_name == "category" and error_type in ("literal_error", "type_error"):
+                message = "유효하지 않은 category 값입니다. (all, top, bottom, outer 중 하나를 선택해주세요)"
                 break
 
         # ValidationError 형식으로 직접 응답 반환

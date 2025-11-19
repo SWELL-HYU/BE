@@ -1510,6 +1510,312 @@ HCI Fashion API
      ```
 ---
 
+## 5. 옷장 (Closet)
+
+### 5.1 옷장에 아이템 저장
+
+**Request:**
+- **Method:** `POST`
+- **URL:** `{{api_base}}/closet/items`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  Content-Type: application/json
+  ```
+- **Body (raw JSON):**
+  ```json
+  {
+    "itemId": 5562350
+  }
+  ```
+
+**Expected Response (201 Created):**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "옷장에 저장되었습니다",
+    "savedAt": "2025-11-16T10:00:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 새로운 아이템 저장**
+   - 유효한 토큰으로 요청
+   - itemId: 존재하는 아이템 ID
+   - Expected: 201 Created, message와 savedAt 반환
+   - `UserClosetItem` 테이블에 레코드 생성됨
+
+2. **아이템 없음 (404 Not Found)**
+   - itemId: 존재하지 않는 아이템 ID (예: 999999999999)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "ITEM_NOT_FOUND",
+         "message": "상품을 찾을 수 없습니다"
+       }
+     }
+     ```
+
+3. **이미 저장된 아이템 (409 Conflict)**
+   - itemId: 이미 옷장에 저장된 아이템 ID
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "ALREADY_SAVED",
+         "message": "이미 옷장에 저장된 아이템입니다"
+       }
+     }
+     ```
+
+4. **itemId 필드 누락 (400 Bad Request)**
+   - Body에서 `itemId` 필드 제거
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "아이템 ID를 입력해주세요"
+       }
+     }
+     ```
+
+5. **itemId 형식 오류 - 문자열 (400 Bad Request)**
+   - itemId: "abc" (문자열)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "유효하지 않은 아이템 ID 형식입니다"
+       }
+     }
+     ```
+
+6. **itemId 형식 오류 - null (400 Bad Request)**
+   - itemId: null
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "VALIDATION_ERROR",
+         "message": "아이템 ID를 입력해주세요"
+       }
+     }
+     ```
+
+---
+
+### 5.2 옷장 아이템 목록 조회
+
+**Request:**
+- **Method:** `GET`
+- **URL:** `{{api_base}}/closet?category=all&page=1&limit=20`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Query Parameters:**
+  - `category` (optional): 카테고리 필터 (기본값: "all", 허용값: "all", "top", "bottom", "outer")
+  - `page` (optional): 페이지 번호 (기본값: 1, 최소: 1)
+  - `limit` (optional): 페이지당 개수 (기본값: 20, 최소: 1, 최대: 50)
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [
+      {
+        "id": 5562350,
+        "category": "outer",
+        "brand": "인사일런스 우먼",
+        "name": "시어링 퍼 자켓 MOCHA BROWN",
+        "price": 227200,
+        "imageUrl": "https://image.msscdn.net/thumbnails/images/goods_img/20251001/5562350/5562350_17593827444982_500.jpg",
+        "purchaseUrl": "https://www.musinsa.com/app/goods/5562350",
+        "savedAt": "2025-11-15T14:30:00Z"
+      },
+      {
+        "id": 5195037,
+        "category": "outer",
+        "brand": "무신사 스탠다드 우먼",
+        "name": "우먼즈 아가일 라운드 넥 가디건 [브라운]",
+        "price": 59390,
+        "imageUrl": "https://image.msscdn.net/thumbnails/images/goods_img/20250619/5195037/5195037_17586944462519_500.jpg",
+        "purchaseUrl": "https://www.musinsa.com/app/goods/5195037",
+        "savedAt": "2025-11-14T09:15:00Z"
+      }
+    ],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 5,
+      "totalItems": 87,
+      "hasNext": true,
+      "hasPrev": false
+    },
+    "categoryCounts": {
+      "top": 32,
+      "bottom": 28,
+      "outer": 27
+    }
+  }
+}
+```
+
+**Expected Response (200 OK - 결과 없음):**
+```json
+{
+  "success": true,
+  "data": {
+    "items": [],
+    "pagination": {
+      "currentPage": 1,
+      "totalPages": 0,
+      "totalItems": 0,
+      "hasNext": false,
+      "hasPrev": false
+    },
+    "categoryCounts": {
+      "top": 0,
+      "bottom": 0,
+      "outer": 0
+    }
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 기본 파라미터 (전체 카테고리)**
+   - 유효한 토큰으로 요청
+   - Query Parameters 없음 (기본값 사용: category=all, page=1, limit=20)
+   - Expected: 200 OK, items 배열, pagination, categoryCounts 반환
+   - 저장 일시 기준 최신순으로 정렬됨
+
+2. **성공 케이스 - category 필터링 (top)**
+   - URL: `{{api_base}}/closet?category=top`
+   - Expected: 200 OK, top 카테고리 아이템만 반환
+   - categoryCounts는 필터와 관계없이 전체 카테고리별 개수 반환
+
+3. **성공 케이스 - category 필터링 (bottom)**
+   - URL: `{{api_base}}/closet?category=bottom`
+   - Expected: 200 OK, bottom 카테고리 아이템만 반환
+
+4. **성공 케이스 - category 필터링 (outer)**
+   - URL: `{{api_base}}/closet?category=outer`
+   - Expected: 200 OK, outer 카테고리 아이템만 반환
+
+5. **성공 케이스 - 페이지 지정**
+   - URL: `{{api_base}}/closet?page=2&limit=20`
+   - Expected: 200 OK, 두 번째 페이지의 아이템 반환
+
+6. **성공 케이스 - limit 조정**
+   - URL: `{{api_base}}/closet?page=1&limit=12`
+   - Expected: 200 OK, 12개의 아이템 반환
+
+7. **성공 케이스 - 결과 없음 (옷장에 아이템이 없는 경우)**
+   - 옷장에 아이템이 없는 사용자
+   - Expected: 200 OK, 빈 items 배열과 pagination, categoryCounts 반환
+   - 모든 카테고리 개수가 0
+
+8. **성공 케이스 - 저장 일시 기준 정렬 확인**
+   - 여러 아이템을 저장 (시간 간격을 두고)
+   - Expected: 가장 최근에 저장한 아이템이 첫 번째로 반환됨
+
+9. **성공 케이스 - categoryCounts는 필터와 무관하게 전체 개수 반환**
+   - URL: `{{api_base}}/closet?category=top`
+   - Expected: top 아이템만 반환되지만, categoryCounts는 전체 카테고리별 개수 반환
+
+10. **category 값 오류 - 잘못된 값 (400 Bad Request)**
+    - URL: `{{api_base}}/closet?category=invalid`
+    - Expected:
+      ```json
+      {
+        "success": false,
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "유효하지 않은 category 값입니다. (all, top, bottom, outer 중 하나를 선택해주세요)"
+        }
+      }
+      ```
+---
+
+### 5.3 옷장에서 아이템 삭제
+
+**Request:**
+- **Method:** `DELETE`
+- **URL:** `{{api_base}}/closet/items/5562350`
+- **Headers:**
+  ```
+  Authorization: Bearer {{token}}
+  ```
+- **Path Parameters:**
+  - `itemId` (integer, required): 아이템 고유 ID
+- **Body**: 없음
+
+**Expected Response (200 OK):**
+```json
+{
+  "success": true,
+  "data": {
+    "message": "옷장에서 삭제되었습니다",
+    "deletedAt": "2025-11-16T10:00:00Z"
+  }
+}
+```
+
+**Test Cases:**
+
+1. **성공 케이스 - 옷장에 저장된 아이템 삭제**
+   - 유효한 토큰으로 요청
+   - itemId: 옷장에 저장된 아이템 ID
+   - Expected: 200 OK, message와 deletedAt 반환
+   - `UserClosetItem` 테이블에서 레코드 삭제됨
+   - 삭제 후 GET /api/closet 호출 시 해당 아이템이 목록에서 제외됨
+
+2. **아이템 없음 (404 Not Found)**
+   - itemId: 존재하지 않는 아이템 ID (예: 999999999999)
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "ITEM_NOT_FOUND",
+         "message": "상품을 찾을 수 없습니다"
+       }
+     }
+     ```
+
+3. **옷장에 저장되지 않은 아이템 (404 Not Found)**
+   - itemId: 존재하는 아이템이지만 옷장에 저장되지 않은 아이템 ID
+   - Expected:
+     ```json
+     {
+       "success": false,
+       "error": {
+         "code": "ITEM_NOT_IN_CLOSET",
+         "message": "옷장에 저장되지 않은 상품입니다"
+       }
+     }
+     ```
+
+4. **다른 사용자의 옷장 아이템 삭제 시도 (404 Not Found)**
+   - User A가 저장한 아이템을 User B가 삭제 시도
+   - Expected: 404 Not Found, `ITEM_NOT_IN_CLOSET` 에러
+
+---
+
 ## 다음 엔드포인트 추가 예정
 
 - ... (계속 추가)
