@@ -1930,13 +1930,11 @@ HCI Fashion API
     "items": [
       {
         "itemId": 5562350,
-        "category": "outer",
-        "imageUrl": "https://image.msscdn.net/thumbnails/images/goods_img/20251001/5562350/5562350_17593827444982_500.jpg"
+        "category": "outer"
       },
       {
         "itemId": 5195037,
-        "category": "top",
-        "imageUrl": "https://image.msscdn.net/thumbnails/images/goods_img/20250619/5195037/5195037_17586944462519_500.jpg"
+        "category": "top"
       }
     ]
   }
@@ -1944,7 +1942,9 @@ HCI Fashion API
   
   **Note:**
   - 사용자 사진은 `UserImage` 테이블에서 자동으로 조회됩니다.
+  - 아이템 이미지는 `ItemImage` 테이블에서 자동으로 조회됩니다 (메인 이미지 우선, 없으면 첫 번째 이미지).
   - 사진이 업로드되지 않은 경우 `PHOTO_REQUIRED` 에러가 발생합니다.
+  - 아이템에 이미지가 없는 경우 `INVALID_ITEM_ID` 에러가 발생합니다.
 
 **Expected Response (202 Accepted):**
 ```json

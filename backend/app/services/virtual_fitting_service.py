@@ -128,15 +128,22 @@ def start_virtual_fitting(
         
         item_ids.append(item.item_id)
     
-    # 4. 아이템 ID 유효성 확인
+    # 4. 아이템 ID 유효성 확인 및 이미지 로드
     existing_items = db.execute(
-        select(Item).where(Item.item_id.in_(item_ids))
+        select(Item)
+        .where(Item.item_id.in_(item_ids))
+        .options(selectinload(Item.images))
     ).scalars().all()
     
     if len(existing_items) != len(item_ids):
         raise InvalidItemIdError()
     
-    # 5. FittingResult 레코드 생성
+    # 5. 아이템 이미지 존재 확인
+    for item in existing_items:
+        if not item.images:
+            raise InvalidItemIdError(message=f"아이템 {item.item_id}에 이미지가 없습니다")
+    
+    # 6. FittingResult 레코드 생성
     fitting_result = FittingResult(
         user_id=user_id,
         status="processing",
@@ -144,7 +151,7 @@ def start_virtual_fitting(
     db.add(fitting_result)
     db.flush()  # fitting_id를 얻기 위해 flush
     
-    # 6. FittingResultItem 레코드 생성
+    # 7. FittingResultItem 레코드 생성
     for item in items:
         fitting_result_item = FittingResultItem(
             fitting_id=fitting_result.fitting_id,
@@ -175,6 +182,8 @@ async def _download_image(url: str, timeout: float = 10.0) -> tuple[bytes, str] 
         (이미지 bytes, MIME 타입) 또는 None (실패 시)
     """
     try:
+        logger.info(f"이미지 다운로드 시작: url={url[:100]}...")  # URL 일부만 로그
+        
         # 상대 경로인 경우 파일 시스템에서 읽기
         # TODO: 배포시 저장 경로 수정
         if url.startswith("/") and not url.startswith(("http://", "https://")):
@@ -190,6 +199,7 @@ async def _download_image(url: str, timeout: float = 10.0) -> tuple[bytes, str] 
             
             # 파일 읽기
             image_bytes = await asyncio.to_thread(file_path.read_bytes)
+            logger.info(f"파일에서 이미지 로드 성공: path={file_path}, size={len(image_bytes)} bytes")
             
             # MIME 타입 추정 (파일 확장자 기반)
             mime_type = "image/jpeg"  # 기본값
@@ -199,13 +209,16 @@ async def _download_image(url: str, timeout: float = 10.0) -> tuple[bytes, str] 
             elif url_lower.endswith((".jpg", ".jpeg")):
                 mime_type = "image/jpeg"
             
+            logger.info(f"이미지 다운로드 완료: size={len(image_bytes)} bytes, mime_type={mime_type}")
             return image_bytes, mime_type
         
         # HTTP/HTTPS URL인 경우 기존 방식 사용
         async with httpx.AsyncClient(timeout=timeout) as client:
+            logger.info(f"HTTP 요청 시작: url={url[:100]}...")
             response = await client.get(url)
             response.raise_for_status()
             image_bytes = response.content
+            logger.info(f"HTTP 응답 수신: status={response.status_code}, size={len(image_bytes)} bytes, content_type={response.headers.get('content-type', 'unknown')}")
             
             # MIME 타입 추정 (URL 확장자 기반)
             mime_type = "image/jpeg"  # 기본값
@@ -215,9 +228,16 @@ async def _download_image(url: str, timeout: float = 10.0) -> tuple[bytes, str] 
             elif url_lower.endswith((".jpg", ".jpeg")):
                 mime_type = "image/jpeg"
             
+            logger.info(f"이미지 다운로드 완료: size={len(image_bytes)} bytes, mime_type={mime_type}")
             return image_bytes, mime_type
+    except httpx.TimeoutException as e:
+        logger.error(f"이미지 다운로드 타임아웃: url={url[:100]}..., timeout={timeout}초, 에러: {e}")
+        return None
+    except httpx.HTTPStatusError as e:
+        logger.error(f"이미지 다운로드 HTTP 에러: url={url[:100]}..., status={e.response.status_code}, 에러: {e}")
+        return None
     except Exception as e:
-        logger.error(f"이미지 다운로드 실패: {url}, 에러: {e}")
+        logger.error(f"이미지 다운로드 실패: url={url[:100]}..., 에러: {type(e).__name__}: {e}", exc_info=True)
         return None
 
 
@@ -257,6 +277,20 @@ def _generate_fitting_image_single_step_sync(
             logger.error("GEMINI_API_KEY가 설정되지 않았습니다")
             return None
         
+        # 이미지 크기 로깅
+        logger.info(f"Gemini API 호출 준비: person_size={len(person_or_result_image_bytes)} bytes, "
+                   f"garment_size={len(garment_image_bytes)} bytes, "
+                   f"canvas_size={len(canvas_image_bytes)} bytes")
+        
+        # 이미지 크기 확인 (PIL로)
+        try:
+            person_img = Image.open(BytesIO(person_or_result_image_bytes))
+            garment_img = Image.open(BytesIO(garment_image_bytes))
+            canvas_img = Image.open(BytesIO(canvas_image_bytes))
+            logger.info(f"이미지 크기: person={person_img.size}, garment={garment_img.size}, canvas={canvas_img.size}")
+        except Exception as e:
+            logger.warning(f"이미지 크기 확인 실패: {e}")
+        
         client = Client(api_key=GEMINI_API_KEY)
         
         # TODO: 프롬프트 구성 (단일 garment용)
@@ -284,6 +318,7 @@ def _generate_fitting_image_single_step_sync(
         )
         
         # 이미지 파트 생성
+        logger.info("이미지 파트 생성 중...")
         person_or_result_part = types.Part.from_bytes(
             data=person_or_result_image_bytes,
             mime_type=person_or_result_mime_type
@@ -301,21 +336,50 @@ def _generate_fitting_image_single_step_sync(
         contents = [enhanced_prompt, person_or_result_part, garment_part, canvas_part]
         
         # Gemini API 호출
-        response = client.models.generate_content(
-            model=GEMINI_MODEL,
-            contents=contents,
-        )
+        logger.info(f"Gemini API 호출 시작: model={GEMINI_MODEL}")
+        import time
+        start_time = time.time()
+        
+        try:
+            response = client.models.generate_content(
+                model=GEMINI_MODEL,
+                contents=contents,
+            )
+            elapsed_time = time.time() - start_time
+            logger.info(f"Gemini API 호출 완료: elapsed_time={elapsed_time:.2f}초")
+        except Exception as api_error:
+            elapsed_time = time.time() - start_time
+            logger.error(f"Gemini API 호출 실패: elapsed_time={elapsed_time:.2f}초, "
+                        f"error_type={type(api_error).__name__}, error={api_error}", exc_info=True)
+            return None
+        
+        # 응답 분석
+        logger.info(f"Gemini API 응답 분석: candidates_count={len(response.candidates) if hasattr(response, 'candidates') else 0}")
+        
+        if not hasattr(response, 'candidates') or not response.candidates:
+            logger.error("Gemini API 응답에 candidates가 없습니다")
+            return None
         
         # 응답에서 이미지 추출
-        for part in response.candidates[0].content.parts:
+        image_found = False
+        for i, part in enumerate(response.candidates[0].content.parts):
+            logger.debug(f"응답 파트 {i}: type={type(part).__name__}, has_inline_data={part.inline_data is not None}")
             if part.inline_data is not None:
+                result_size = len(part.inline_data.data)
+                logger.info(f"피팅 결과 이미지 추출 성공: size={result_size} bytes")
                 return part.inline_data.data
         
-        logger.error("응답에서 편집된 이미지를 찾지 못했습니다")
+        logger.error("응답에서 편집된 이미지를 찾지 못했습니다. 응답 구조:")
+        logger.error(f"  - candidates: {len(response.candidates)}")
+        if response.candidates:
+            logger.error(f"  - first candidate content parts: {len(response.candidates[0].content.parts)}")
+            for i, part in enumerate(response.candidates[0].content.parts):
+                logger.error(f"    part[{i}]: type={type(part).__name__}, "
+                           f"inline_data={part.inline_data is not None if hasattr(part, 'inline_data') else 'N/A'}")
         return None
         
     except Exception as e:
-        logger.error(f"Gemini API 호출 실패: {e}")
+        logger.error(f"Gemini API 호출 실패: error_type={type(e).__name__}, error={e}", exc_info=True)
         return None
 
 
@@ -398,10 +462,10 @@ async def _process_virtual_fitting_async(
         피팅할 아이템 목록
     """
     try:
-        # 1. 이미지 다운로드
-        logger.info(f"가상 피팅 처리 시작: fitting_id={fitting_id}")
+        logger.info(f"가상 피팅 처리 시작: fitting_id={fitting_id}, user_id={user_id}, items_count={len(items)}")
+        logger.info(f"아이템 목록: {[{'item_id': item.item_id, 'category': item.category} for item in items]}")
         
-        # 사용자 사진 조회 (UserImage 테이블에서)
+        # 사용자 사진 조회
         user_image = db.execute(
             select(UserImage)
             .where(UserImage.user_id == user_id)
@@ -409,35 +473,80 @@ async def _process_virtual_fitting_async(
         ).scalar_one_or_none()
         
         if user_image is None:
+            logger.error(f"사용자 사진 없음: user_id={user_id}")
             raise PhotoRequiredError()
         
+        logger.info(f"사용자 사진 조회 성공: image_url={user_image.image_url}")
+        
         # 사람 이미지 다운로드
+        logger.info("사용자 이미지 다운로드 시작...")
         person_result = await _download_image(user_image.image_url)
         if person_result is None:
+            logger.error("사용자 사진 다운로드 실패")
             raise Exception("사용자 사진 다운로드 실패")
         person_image_bytes, person_mime_type = person_result
+        logger.info(f"사용자 이미지 다운로드 완료: size={len(person_image_bytes)} bytes, mime_type={person_mime_type}")
+        
+        # 아이템 조회
+        item_ids = [item.item_id for item in items]
+        logger.info(f"아이템 조회 시작: item_ids={item_ids}")
+        db_items = db.execute(
+            select(Item)
+            .where(Item.item_id.in_(item_ids))
+            .options(selectinload(Item.images))
+        ).scalars().all()
+        
+        logger.info(f"아이템 조회 완료: found_count={len(db_items)}, requested_count={len(item_ids)}")
+        
+        # 아이템 ID로 매핑
+        item_dict = {item.item_id: item for item in db_items}
         
         # 의류 이미지 다운로드
         garment_results = []
-        for item in items:
-            result = await _download_image(item.image_url)
+        for item_request in items:
+            logger.info(f"아이템 이미지 처리 시작: item_id={item_request.item_id}, category={item_request.category}")
+            db_item = item_dict.get(item_request.item_id)
+            if db_item is None:
+                logger.error(f"아이템을 찾을 수 없습니다: item_id={item_request.item_id}")
+                raise Exception(f"아이템을 찾을 수 없습니다: item_id={item_request.item_id}")
+            
+            logger.info(f"아이템 정보: item_id={db_item.item_id}, name={db_item.item_name}, images_count={len(db_item.images)}")
+            
+            # 메인 이미지 추출
+            main_image = next(
+                (img for img in db_item.images if img.is_main),
+                db_item.images[0] if db_item.images else None
+            )
+            
+            if main_image is None:
+                logger.error(f"아이템 이미지를 찾을 수 없습니다: item_id={item_request.item_id}, images_count={len(db_item.images)}")
+                raise Exception(f"아이템 이미지를 찾을 수 없습니다: item_id={item_request.item_id}")
+            
+            logger.info(f"아이템 이미지 선택: image_url={main_image.image_url}, is_main={main_image.is_main}")
+            
+            result = await _download_image(main_image.image_url)
             if result is None:
-                raise Exception(f"아이템 이미지 다운로드 실패: item_id={item.item_id}")
+                logger.error(f"아이템 이미지 다운로드 실패: item_id={item_request.item_id}, image_url={main_image.image_url}")
+                raise Exception(f"아이템 이미지 다운로드 실패: item_id={item_request.item_id}")
+            
+            garment_bytes, garment_mime = result
+            logger.info(f"아이템 이미지 다운로드 완료: item_id={item_request.item_id}, size={len(garment_bytes)} bytes, mime_type={garment_mime}")
             garment_results.append(result)
         
-        # 캔버스 생성 (사람 이미지 크기 기준)
+        # 캔버스 생성
         person_image = Image.open(BytesIO(person_image_bytes))
         original_width, original_height = person_image.size
+        logger.info(f"사용자 이미지 크기: {original_width}x{original_height}, mode={person_image.mode}")
         
         canvas_mode = "RGBA" if person_image.mode == "RGBA" else "RGB"
         canvas_fill = (255, 255, 255, 0) if canvas_mode == "RGBA" else (255, 255, 255)
         canvas_image = Image.new(canvas_mode, (original_width, original_height), canvas_fill)
         
-        # 캔버스를 bytes로 변환
         with BytesIO() as buffer:
             canvas_image.save(buffer, format="PNG")
             canvas_image_bytes = buffer.getvalue()
         canvas_mime_type = "image/png"
+        logger.info(f"캔버스 생성 완료: size={original_width}x{original_height}, canvas_size={len(canvas_image_bytes)} bytes")
         
         # 2. FittingResult 조회
         fitting_result = db.get(FittingResult, fitting_id)
@@ -456,6 +565,7 @@ async def _process_virtual_fitting_async(
             for i, (item, garment_result) in enumerate(zip(items, garment_results)):
                 garment_bytes, garment_mime = garment_result
                 
+                logger.info(f"피팅 단계 {i+1}/{len(items)} 시작: category={item.category}, item_id={item.item_id}")
                 # current_step 업데이트
                 fitting_result.current_step = item.category
                 db.commit()

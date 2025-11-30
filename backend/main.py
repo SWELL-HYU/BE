@@ -1,9 +1,21 @@
+import logging
+import sys
+
 from fastapi import FastAPI
 
 from app.core import register_exception_handlers
 from app.db.database import Base, engine
 from app.api import api_router
 from app import models
+
+# 로깅 설정
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 # 데이터베이스 테이블 생성
 # 모든 모델 클래스 검사 + 존재하지 않는 테이블 생성

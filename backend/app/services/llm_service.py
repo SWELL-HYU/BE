@@ -135,7 +135,7 @@ async def generate_llm_message(coordi: Coordi, user: User) -> Optional[str]:
             mime_type = None
     
     # 프롬프트 구성
-    # TODO: 사용자 선호 반영 가능여부 조사
+    # TODO: 사용자 선호 반영 가능여부 조사, 프롬프트 메세지도 변경해야함
     prompt = f"""다음 코디 정보를 바탕으로 사용자에게 친근하고 매력적인 추천 메시지를 작성해주세요.
 
 코디 정보:

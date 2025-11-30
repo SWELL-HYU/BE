@@ -7,7 +7,7 @@ from __future__ import annotations
 import asyncio
 from typing import Optional
 
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app.models.coordi import Coordi
@@ -25,170 +25,6 @@ from app.schemas.recommendation_response import (
 from app.services.llm_service import generate_llm_message
 
 
-def _get_excluded_coordi_ids(db: Session, user_id: int) -> set[int]:
-    """
-    사용자가 이미 본 코디 또는 상호작용한 코디 ID 집합을 반환합니다.
-    
-    Parameters
-    ----------
-    db:
-        데이터베이스 세션
-    user_id:
-        사용자 ID
-        
-    Returns
-    -------
-    set[int]:
-        제외할 코디 ID 집합
-    """
-    # 사용자가 이미 본 코디 ID 조회
-    viewed_coordi_ids = db.execute(
-        select(UserCoordiViewLog.coordi_id)
-        .where(UserCoordiViewLog.user_id == user_id)
-    ).scalars().all()
-    
-    # 사용자가 상호작용한 코디 ID 조회 (모든 action_type 포함)
-    interacted_coordi_ids = db.execute(
-        select(UserCoordiInteraction.coordi_id)
-        .where(UserCoordiInteraction.user_id == user_id)
-    ).scalars().all()
-    
-    # 두 집합 합치기 (중복 제거)
-    return set(viewed_coordi_ids) | set(interacted_coordi_ids)
-
-
-def _is_cold_start(db: Session, user_id: int) -> bool:
-    """
-    Cold-start 여부를 판단합니다.
-    
-    Cold-start 조건:
-    - 실제 사용 상호작용 이력 없음 (온보딩 설문의 preference 제외)
-      * view_log 없음
-      * like, skip 상호작용 없음
-    
-    흐름:
-    1. 온보딩 설문 완료 → preference 기록됨 (제외)
-    2. Cold-start 추천 실행
-    3. 사용자가 코디를 보고 좋아요/스킵 → Warm-start로 전환
-    
-    Parameters
-    ----------
-    db:
-        데이터베이스 세션
-    user_id:
-        사용자 ID
-        
-    Returns
-    -------
-    bool:
-        Cold-start이면 True, Warm-start이면 False
-    """
-    # 1. 코디 조회 로그 확인
-    has_view_log = db.execute(
-        select(func.count(UserCoordiViewLog.log_id))
-        .where(UserCoordiViewLog.user_id == user_id)
-    ).scalar_one() > 0
-    
-    # 2. 실제 사용 상호작용 확인 (like, skip만, preference 제외)
-    has_real_interaction = db.execute(
-        select(func.count(UserCoordiInteraction.user_id))
-        .where(
-            UserCoordiInteraction.user_id == user_id,
-            UserCoordiInteraction.action_type.in_(["like", "skip"])  # preference 제외
-        )
-    ).scalar_one() > 0
-    
-    # 상호작용 이력이 없으면 Cold-start
-    return not (has_view_log or has_real_interaction)
-
-
-async def _get_cold_start_recommendations(
-    db: Session,
-    user: User,
-    page: int,
-    limit: int,
-) -> tuple[list[int], int]:
-    """
-    Cold-start 추천: 선호 태그 기반 또는 인기 코디
-    
-    전략:
-    1. 선호 태그가 있으면 → 선호 태그 이름이 Coordi.description에 포함된 코디 우선 정렬
-    2. 선호 태그가 없으면 → 성별 기반 최신순
-    
-    Parameters
-    ----------
-    db:
-        데이터베이스 세션
-    user:
-        사용자 모델
-    page:
-        페이지 번호 (1부터 시작)
-    limit:
-        페이지당 개수
-        
-    Returns
-    -------
-    tuple[list[int], int]:
-        (코디 ID 리스트, 전체 코디 개수)
-    """
-    if user.gender is None:
-        return [], 0
-    
-    excluded_coordi_ids = _get_excluded_coordi_ids(db, user.user_id)
-    offset = (page - 1) * limit
-    
-    # 기본 쿼리: 성별 필터링
-    base_query = select(Coordi).where(Coordi.gender == user.gender)
-    
-    # 제외할 코디가 있으면 제외
-    if excluded_coordi_ids:
-        base_query = base_query.where(Coordi.coordi_id.notin_(excluded_coordi_ids))
-    
-    # 선호 태그가 있으면 태그 기반 필터링
-    # TODO: 모델로 교체
-    if user.preferred_tags:
-        # 선호 태그 이름 추출
-        preferred_tag_names = [tag.tag.name for tag in user.preferred_tags]
-        
-        # 선호 태그가 description에 포함된 코디를 우선 정렬
-        # SQL LIKE 쿼리로 매칭
-        tag_conditions = [
-            Coordi.description.contains(tag_name) for tag_name in preferred_tag_names
-        ]
-        
-        # 매칭된 코디와 매칭되지 않은 코디를 구분하여 정렬
-        # CASE WHEN을 사용하여 매칭 여부를 우선순위로 설정
-        match_priority = case(
-            (or_(*tag_conditions), 0),  # 매칭된 코디는 0 (우선)
-            else_=1  # 매칭되지 않은 코디는 1 (나중)
-        )
-        
-        # 정렬: 매칭 우선순위 → 최신순
-        coordis = db.execute(
-            base_query
-            .order_by(match_priority, Coordi.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        ).scalars().all()
-    else:
-        # 선호 태그가 없으면 최신순
-        coordis = db.execute(
-            base_query
-            .order_by(Coordi.created_at.desc())
-            .offset(offset)
-            .limit(limit)
-        ).scalars().all()
-    
-    # 전체 개수 조회
-    count_query = select(func.count(Coordi.coordi_id)).where(Coordi.gender == user.gender)
-    if excluded_coordi_ids:
-        count_query = count_query.where(Coordi.coordi_id.notin_(excluded_coordi_ids))
-    total_items = db.execute(count_query).scalar_one()
-    
-    coordi_ids = [coordi.coordi_id for coordi in coordis]
-    return coordi_ids, total_items
-
-
 async def _get_recommended_coordi_ids_temporary(
     db: Session,
     user_id: int,
@@ -198,7 +34,7 @@ async def _get_recommended_coordi_ids_temporary(
     """
     임시 추천 함수: 사용자 성별에 맞는 코디를 최신순으로 반환합니다.
     
-    TODO: 추천 모델로 교체 예정
+    TODO: 추천 모델로 교체 예정, 진짜 엄청 개편필요함 ㅠㅠ
     
     Parameters
     ----------
@@ -222,7 +58,19 @@ async def _get_recommended_coordi_ids_temporary(
         return [], 0
     
     # 사용자가 이미 본 코디 또는 상호작용한 코디 ID 조회 (제외할 코디)
-    excluded_coordi_ids = _get_excluded_coordi_ids(db, user_id)
+    viewed_coordi_ids = db.execute(
+        select(UserCoordiViewLog.coordi_id)
+        .where(UserCoordiViewLog.user_id == user_id)
+    ).scalars().all()
+    
+    interacted_coordi_ids = db.execute(
+        select(UserCoordiInteraction.coordi_id)
+        .where(UserCoordiInteraction.user_id == user_id)
+    ).scalars().all()
+    
+    # 두 집합 합치기 (중복 제거)
+    # TODO: 이렇게 사후적 조치를 하는 것보단, 애초에 dataset에서 제외되도록 추천 모델 개발 필요
+    excluded_coordi_ids = set(viewed_coordi_ids) | set(interacted_coordi_ids)
     
     # 사용자 성별에 맞는 코디 조회 (최신순, 이미 본 코디 제외)
     # TODO: 추천 모델로 교체 예정
@@ -391,19 +239,10 @@ async def get_recommended_coordis(
     if user is None:
         raise ValueError(f"User with id {user_id} not found")
     
-    # 2. Cold-start vs Warm-start 판단
-    is_cold_start = _is_cold_start(db, user_id)
-    
-    # 3. 추천 로직 분기
-    if is_cold_start:
-        coordi_ids, total_items = await _get_cold_start_recommendations(
-            db, user, page, limit
-        )
-    else:
-        # Warm-start: 임시 로직 사용 (TODO: 추천 모델로 교체 예정)
-        coordi_ids, total_items = await _get_recommended_coordi_ids_temporary(
-            db, user.user_id, page, limit
-        )
+    # 2. 추천 모델 임시 함수 호출 → 코디 ID 리스트
+    coordi_ids, total_items = await _get_recommended_coordi_ids_temporary(
+        db, user_id, page, limit
+    )
     
     # 코디 ID 리스트가 비어있으면 빈 결과 반환
     if not coordi_ids:

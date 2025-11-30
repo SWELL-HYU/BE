@@ -16,7 +16,6 @@ from app.schemas.common import PaginationPayload
 class FittingItemRequest(BaseModel):
     item_id: int = Field(alias="itemId", description="아이템 고유 ID")
     category: Literal["top", "bottom", "outer"] = Field(description="아이템 카테고리")
-    image_url: str = Field(alias="imageUrl", description="아이템 이미지 URL")
 
     class Config:
         populate_by_name = True

@@ -16,8 +16,8 @@ DATABASE_URL = os.getenv(
 # Engine 생성(Application에서 공유할 DB connection pool 생성)
 engine = create_engine(
     DATABASE_URL,   
-    pool_pre_ping=True,  # 연결 상태 확인
-    echo=True  # 개발 환경에서 SQL 쿼리 로깅
+    pool_pre_ping=True,  # 연결 상태 확인: 
+    echo=False  # SQL 쿼리 로깅 비활성화 (TODO개발 시 필요하면 True로 변경)
 )
 
 # SessionLocal 생성(Application에서 공유할 DB session 생성)
