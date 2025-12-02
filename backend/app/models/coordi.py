@@ -7,6 +7,7 @@
 from sqlalchemy import BigInteger, Column, DateTime, Enum, Index, String, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
+from pgvector.sqlalchemy import Vector
 
 from app.db.database import Base
 
@@ -14,7 +15,7 @@ from app.db.database import Base
 class Coordi(Base):
     """`Coordis` 테이블 모델."""
 
-    __tablename__ = "Coordis"
+    __tablename__ = "coordis"
 
     coordi_id = Column(BigInteger, primary_key=True, autoincrement=True)
     season = Column(
@@ -28,6 +29,11 @@ class Coordi(Base):
         comment="코디 대상 성별",
     )
     description = Column(Text, comment="태그 포함 설명 문구")
+    description_embedding = Column(
+        Vector(512),
+        nullable=True,
+        comment="Description embedding vector for semantic search (512 dimensions)"
+    )
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (

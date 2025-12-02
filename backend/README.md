@@ -31,7 +31,7 @@ cp .env.example .env          # 파일이 없다면 직접 생성
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/hci_fashion_db
 ```
 
-## 🗄 PostgreSQL 컨테이너 실행
+## 🗄 PostgreSQL 컨테이너 실행(로컬 개발시)
 
 ```bash
 docker-compose up -d          # DB만 실행

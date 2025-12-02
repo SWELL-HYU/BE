@@ -296,26 +296,31 @@ def _generate_fitting_image_single_step_sync(
         # TODO: 프롬프트 구성 (단일 garment용)
         # TODO: 진짜 무조건 바꿔야됨. 분기처리하던지 좀 싀발
         enhanced_prompt = (
-            "Role: You are a professional virtual try-on artist specialized in realistic garment dressing.\n"
+        "Role: You are an expert AI specialized in high-fidelity photorealistic virtual try-on and composite rendering.\n"
             "Input structure:\n"
-            " - Image[1]: Person image (the model to be dressed, centered in frame)\n"
-            " - Image[2]: Garment image (to be worn on the person)\n"
-            " - Image[3]: Final background canvas\n\n"
-            "Objective: Dress the centered person in Image[1] with the garment from Image[2], "
-            "as if physically worn on the body. "
-            "After the person is dressed, place and paint the result directly onto the final background canvas (Image[3]).\n\n"
-            "Canvas priority: The final composition must fit perfectly onto the provided canvas dimensions. "
-            "Do not resize, crop, pad, rotate, or move the person or the canvas.\n\n"
-            "Garment dressing process: Simulate realistic clothing wear — position it accurately over the body, "
-            "fit the sleeves, collar, and hem naturally, follow body curvature, and reproduce realistic tension, stretch, and fabric folds. "
-            "Warp and deform only the garment (never the person) to achieve a perfect anatomical fit. "
-            "Blend lighting, color, and shadows so the clothing appears genuinely worn rather than overlaid.\n\n"
-            "Preserve: Maintain the person's pose, proportions, facial features, hair, skin tone, accessories, and background environment. "
-            "Only modify areas necessary to make the garment appear truly worn.\n\n"
-            "Restrictions: Do not invent new objects, duplicate or erase body parts, distort anatomy, or alter the person's position.\n\n"
-            "Output: A single high-quality PNG image of the person realistically wearing the provided garment, "
-            "painted seamlessly onto the supplied background canvas."
+            " - Image[1]: Reference Person (Subject to be dressed, anatomy and pose are ground truth)\n"
+            " - Image[2]: Garment Image (Target apparel with specific fabric texture and design)\n"
+            " - Image[3]: Background Canvas (Fixed dimension for final output)\n\n"
+
+            "Objective: Synthesize a photorealistic composite where the person in Image[1] wears the garment from Image[2]. "
+            "The result must be indistinguishable from a real photograph, placed onto Image[3] without altering canvas geometry.\n\n"
+
+            "Canvas priority: CRITICAL - The final composite must strictly match the dimensions of Image[3]. "
+            "Do NOT crop, resize, pad, shift, or transform the person relative to the canvas frame.\n\n"
+
+            "Garment dressing process: Map the garment onto the body topology using physics-based draping. "
+            "Simulate gravity, material stiffness, and tension folds based on the pose. "
+            "Transfer environmental lighting to generate accurate 'contact shadows' (ambient occlusion) and match the film grain/noise of the reference.\n\n"
+
+            "Preserve: FREEZE the subject's identity, facial features, hair strands, skin texture, hands, and accessories. "
+            "Handle occlusions intelligently: if hair falls over shoulders, render the garment layer *under* the hair strands.\n\n"
+
+            "Restrictions: No hallucinations of extra limbs, no distortion of face or hands, no blurring of garment textures. "
+            "Do not change the body shape or background dimensions.\n\n"
+
+            "Output: A single high-resolution PNG integrating the dressed subject seamlessly with professional retouching quality."
         )
+
         
         # 이미지 파트 생성
         logger.info("이미지 파트 생성 중...")

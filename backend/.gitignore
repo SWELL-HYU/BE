@@ -67,3 +67,6 @@ secrets/
 *.pem
 *.key
 
+# Uploads
+uploads/
+

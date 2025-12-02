@@ -319,6 +319,16 @@ class DeleteFailedError(AppException):
     def __init__(self) -> None:
         super().__init__(message="사진 삭제에 실패했습니다")
 
+# 사람이 포함되지 않은 이미지 예외
+class InvalidPersonImageError(AppException):
+    """사진에 사람이 포함되어 있지 않거나 포즈가 적절하지 않을 때 발생하는 예외."""
+
+    code = "INVALID_PERSON_IMAGE"
+    status_code = status.HTTP_400_BAD_REQUEST
+
+    def __init__(self) -> None:
+        super().__init__(message="사진에 사람이 포함되어 있지 않거나 포즈가 적절하지 않습니다")
+
 # 커스텀 예외 핸들러 등록
 def register_exception_handlers(app: FastAPI) -> None:
     """커스텀 예외를 FastAPI 인스턴스에 바인딩."""

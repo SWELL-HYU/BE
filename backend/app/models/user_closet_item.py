@@ -21,7 +21,7 @@ from app.db.database import Base
 class UserClosetItem(Base):
     """`User_Closet_Items` 테이블 모델."""
 
-    __tablename__ = "User_Closet_Items"
+    __tablename__ = "user_closet_items"
     __table_args__ = (
         PrimaryKeyConstraint("user_id", "item_id"),
         Index("idx_user_closet_items_item", "item_id"),
@@ -29,12 +29,12 @@ class UserClosetItem(Base):
 
     user_id = Column(
         BigInteger,
-        ForeignKey("Users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
     item_id = Column(
         BigInteger,
-        ForeignKey("Items.item_id", ondelete="CASCADE"),
+        ForeignKey("items.item_id", ondelete="CASCADE"),
         nullable=False,
     )
     added_at = Column(DateTime(timezone=True), server_default=func.now())

@@ -14,7 +14,7 @@ from app.db.database import Base
 class UserCoordiViewLog(Base):
     """`User_Coordi_View_Logs` 테이블 모델."""
 
-    __tablename__ = "User_Coordi_View_Logs"
+    __tablename__ = "user_coordi_view_logs"
     __table_args__ = (
         Index("idx_user_coordi", "user_id", "coordi_id"),
         Index("idx_coordi_view_logs_coordi_time", "coordi_id", "view_started_at"),
@@ -23,12 +23,12 @@ class UserCoordiViewLog(Base):
     log_id = Column(BigInteger, autoincrement=True, primary_key=True)
     user_id = Column(
         BigInteger,
-        ForeignKey("Users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
     coordi_id = Column(
         BigInteger,
-        ForeignKey("Coordis.coordi_id", ondelete="CASCADE"),
+        ForeignKey("coordis.coordi_id", ondelete="CASCADE"),
         nullable=False,
     )
     view_started_at = Column(

@@ -14,12 +14,12 @@ from app.db.database import Base
 class CoordiImage(Base):
     """`Coordi_Images` 테이블 모델."""
 
-    __tablename__ = "Coordi_Images"
+    __tablename__ = "coordi_images"
 
     image_id = Column(BigInteger, primary_key=True, autoincrement=True)
     coordi_id = Column(
         BigInteger,
-        ForeignKey("Coordis.coordi_id", ondelete="CASCADE"),
+        ForeignKey("coordis.coordi_id", ondelete="CASCADE"),
         nullable=False,
     )
     image_url = Column(String(1024), nullable=False)

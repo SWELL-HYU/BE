@@ -14,12 +14,12 @@ from app.db.database import Base
 class UserImage(Base):
     """`User_Images` 테이블 모델."""
 
-    __tablename__ = "User_Images"
+    __tablename__ = "user_images"
 
     image_id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(
         BigInteger,
-        ForeignKey("Users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
     image_url = Column(

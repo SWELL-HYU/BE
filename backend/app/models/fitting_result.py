@@ -22,12 +22,12 @@ from app.db.database import Base
 class FittingResult(Base):
     """`Fitting_Results` 테이블 모델."""
 
-    __tablename__ = "Fitting_Results"
+    __tablename__ = "fitting_results"
 
     fitting_id = Column(BigInteger, primary_key=True, autoincrement=True)
     user_id = Column(
         BigInteger,
-        ForeignKey("Users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
     status = Column(
@@ -66,7 +66,7 @@ class FittingResult(Base):
     )
     items = relationship(
         "Item",
-        secondary="Fitting_Result_Items",
+        secondary="fitting_result_items",
         back_populates="fitting_results",
         passive_deletes=True,
     )

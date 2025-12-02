@@ -48,11 +48,11 @@ def get_preferences_options(
     # 헤더에서 토큰 추출
     token = extract_bearer_token(authorization)
 
-    # 토큰 검증
-    decode_access_token(token)
+    # 토큰 검증 및 사용자 조회
+    user = get_user_from_token(db, token)
 
-    # 선호도 설정 옵션 데이터 조회
-    hashtags, sample_outfits = get_preferences_options_data(db)
+    # 선호도 설정 옵션 데이터 조회 (사용자 성별에 따라 필터링)
+    hashtags, sample_outfits = get_preferences_options_data(db, user.gender)
 
     # 응답 반환
     return PreferencesOptionsResponse(

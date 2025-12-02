@@ -1,12 +1,18 @@
 import logging
+import os
 import sys
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.core import register_exception_handlers
 from app.db.database import Base, engine
 from app.api import api_router
 from app import models
+
+# 환경 변수 로드
+load_dotenv()
 
 # 로깅 설정
 logging.basicConfig(
@@ -28,6 +34,19 @@ app = FastAPI(
     title="HCI Fashion Recommendation API",
     description="Fashion Recommendation Application for HCI Lecture",
     version="1.0.0"
+)
+
+# CORS 미들웨어 설정
+# TODO: 배포 시 고려
+cors_origins_str = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+cors_origins = [origin.strip() for origin in cors_origins_str.split(",") if origin.strip()]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=cors_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # 커스텀 예외 핸들러 등록

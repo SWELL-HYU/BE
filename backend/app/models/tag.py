@@ -14,7 +14,7 @@ from app.db.database import Base
 class Tag(Base):
     """`Tags` 테이블 모델."""
 
-    __tablename__ = "Tags"
+    __tablename__ = "tags"
 
     tag_id = Column(BigInteger, primary_key=True, autoincrement=True)
     name = Column(
