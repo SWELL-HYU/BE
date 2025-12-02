@@ -30,6 +30,7 @@ PyJWT==2.9.0
 google-genai==0.3.0
 Pillow==10.4.0
 requests==2.31.0  # 이미지 다운로드용
+mediapipe>=0.10.0  # 포즈 검증용
 
 # --- Async file I/O ---
 aiofiles==24.1.0

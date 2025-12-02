@@ -2,6 +2,15 @@ Google Cloud Console에서 Cloud SQL (PostgreSQL + pgvector) 설정 가이드입
 
 ## Google Cloud SQL (PostgreSQL + pgvector) 설정 가이드
 
+### 참고로 나는
+- 인스턴스 생성 -> 잘보기
+- 플래그 설정(vector-assistant) -> 잘보기
+- Cloud shell로 DB, 사용자, 권한 설정 -> 잘보기
+- Cloud shell로 Create Schema 실행
+- Cursor, DBeaver와 연결됨을 확인
+- 로컬 데이터 마이그레이션으로 GCP에 기존 데이터 업로드
+- 마이그레이션할 때 테이블 Name이 다른 걸 모르고 계속 틀렸음.
+
 ### 사전 준비사항
 
 1. Google Cloud 계정 생성
