@@ -21,6 +21,7 @@ from app.core.exceptions import (
     InsufficientOutfitsError,
     InvalidHashtagIdError,
     InvalidOutfitIdError,
+    InvalidPersonImageError,
     TooManyHashtagsError,
     TooManyOutfitsError,
     UploadFailedError,
@@ -31,6 +32,7 @@ from app.core.file_utils import (
     get_upload_directory,
     validate_upload_file,
 )
+from app.core.image_validation import validate_person_in_image
 from app.models.coordi import Coordi
 from app.models.tag import Tag
 from app.models.user import User
@@ -309,6 +311,10 @@ async def upload_profile_photo(
         # 파일 내용 읽기
         content = await file.read()
         
+        # 사람 검증 (MediaPipe Pose)
+        # 파일 저장 전에 검증하여 잘못된 이미지는 저장되지 않도록 함
+        await asyncio.to_thread(validate_person_in_image, content)
+        
         # 파일 저장 (비동기 I/O)
         async with aiofiles.open(file_path, "wb") as f:
             await f.write(content)
@@ -349,6 +355,16 @@ async def upload_profile_photo(
 
         return user_image
 
+    except InvalidPersonImageError:
+        # InvalidPersonImageError는 그대로 재발생 (커스텀 에러 메시지 유지)
+        db.rollback()
+        # 저장된 파일이 있으면 삭제 (비동기)
+        if file_path.exists():
+            try:
+                await asyncio.to_thread(file_path.unlink)
+            except Exception:
+                pass
+        raise
     except Exception as e:
         db.rollback()
         # 저장된 파일이 있으면 삭제 (비동기)
