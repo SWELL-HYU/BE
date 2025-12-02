@@ -14,7 +14,7 @@ from app.db.database import Base
 class User(Base):
     """`Users` 테이블 모델."""
 
-    __tablename__ = "Users"
+    __tablename__ = "users"
 
     user_id = Column(BigInteger, primary_key=True, autoincrement=True)
     email = Column(String(255), nullable=False, unique=True)
@@ -59,12 +59,6 @@ class User(Base):
     )
     closet_items = relationship(
         "UserClosetItem",
-        back_populates="user",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    item_view_logs = relationship(
-        "UserItemViewLog",
         back_populates="user",
         cascade="all, delete-orphan",
         passive_deletes=True,

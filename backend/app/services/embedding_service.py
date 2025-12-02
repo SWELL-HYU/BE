@@ -9,7 +9,7 @@ from typing import List
 
 from sentence_transformers import SentenceTransformer
 
-
+# TODO: 데이터주입이 끝나면 모두 주석처리
 class EmbeddingService:
     """Description embedding을 생성하는 서비스"""
     

@@ -15,7 +15,7 @@ from app.db.database import Base
 class Coordi(Base):
     """`Coordis` 테이블 모델."""
 
-    __tablename__ = "Coordis"
+    __tablename__ = "coordis"
 
     coordi_id = Column(BigInteger, primary_key=True, autoincrement=True)
     season = Column(

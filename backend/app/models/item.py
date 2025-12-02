@@ -22,7 +22,7 @@ from app.db.database import Base
 class Item(Base):
     """`Items` 테이블 모델."""
 
-    __tablename__ = "Items"
+    __tablename__ = "items"
 
     item_id = Column(BigInteger, primary_key=True, autoincrement=True)
     item_name = Column(String(255), nullable=False)
@@ -43,7 +43,7 @@ class Item(Base):
     # 종속 엔티티들과의 관계
     fitting_results = relationship(
         "FittingResult",
-        secondary="Fitting_Result_Items",
+        secondary="fitting_result_items",
         back_populates="items",
         passive_deletes=True,
     )
@@ -67,12 +67,6 @@ class Item(Base):
     )
     closet_items = relationship(
         "UserClosetItem",
-        back_populates="item",
-        cascade="all, delete-orphan",
-        passive_deletes=True,
-    )
-    view_logs = relationship(
-        "UserItemViewLog",
         back_populates="item",
         cascade="all, delete-orphan",
         passive_deletes=True,

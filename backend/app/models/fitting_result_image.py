@@ -14,12 +14,12 @@ from app.db.database import Base
 class FittingResultImage(Base):
     """`Fitting_Result_Images` 테이블 모델."""
 
-    __tablename__ = "Fitting_Result_Images"
+    __tablename__ = "fitting_result_images"
 
     image_id = Column(BigInteger, primary_key=True, autoincrement=True)
     fitting_id = Column(
         BigInteger,
-        ForeignKey("Fitting_Results.fitting_id", ondelete="CASCADE"),
+        ForeignKey("fitting_results.fitting_id", ondelete="CASCADE"),
         nullable=False,
     )
     image_url = Column(

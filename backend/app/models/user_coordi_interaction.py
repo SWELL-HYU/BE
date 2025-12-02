@@ -22,7 +22,7 @@ from app.db.database import Base
 class UserCoordiInteraction(Base):
     """`User_Coordi_Interactions` 테이블 모델."""
 
-    __tablename__ = "User_Coordi_Interactions"
+    __tablename__ = "user_coordi_interactions"
     __table_args__ = (
         PrimaryKeyConstraint("user_id", "coordi_id"),
         Index("idx_user_coordi_interactions_coordi", "coordi_id", "action_type"),
@@ -30,12 +30,12 @@ class UserCoordiInteraction(Base):
 
     user_id = Column(
         BigInteger,
-        ForeignKey("Users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
     coordi_id = Column(
         BigInteger,
-        ForeignKey("Coordis.coordi_id", ondelete="CASCADE"),
+        ForeignKey("coordis.coordi_id", ondelete="CASCADE"),
         nullable=False,
     )
     action_type = Column(

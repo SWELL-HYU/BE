@@ -13,7 +13,7 @@ from app.db.database import Base
 class FittingResultItem(Base):
     """`Fitting_Result_Items` 테이블 모델."""
 
-    __tablename__ = "Fitting_Result_Items"
+    __tablename__ = "fitting_result_items"
     __table_args__ = (
         PrimaryKeyConstraint("fitting_id", "item_id"),
         Index("idx_fitting_result_items_item", "item_id"),
@@ -21,12 +21,12 @@ class FittingResultItem(Base):
 
     fitting_id = Column(
         BigInteger,
-        ForeignKey("Fitting_Results.fitting_id", ondelete="CASCADE"),
+        ForeignKey("fitting_results.fitting_id", ondelete="CASCADE"),
         nullable=False,
     )
     item_id = Column(
         BigInteger,
-        ForeignKey("Items.item_id", ondelete="CASCADE"),
+        ForeignKey("items.item_id", ondelete="CASCADE"),
         nullable=False,
     )
 

@@ -20,17 +20,17 @@ from app.db.database import Base
 class UserPreferredTag(Base):
     """`User_Preferred_Tags` 테이블 모델."""
 
-    __tablename__ = "User_Preferred_Tags"
+    __tablename__ = "user_preferred_tags"
     __table_args__ = (PrimaryKeyConstraint("user_id", "tag_id"),)
 
     user_id = Column(
         BigInteger,
-        ForeignKey("Users.user_id", ondelete="CASCADE"),
+        ForeignKey("users.user_id", ondelete="CASCADE"),
         nullable=False,
     )
     tag_id = Column(
         BigInteger,
-        ForeignKey("Tags.tag_id", ondelete="CASCADE"),
+        ForeignKey("tags.tag_id", ondelete="CASCADE"),
         nullable=False,
     )
     created_at = Column(DateTime(timezone=True), server_default=func.now())

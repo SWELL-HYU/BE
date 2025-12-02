@@ -13,7 +13,7 @@ from app.db.database import Base
 class CoordiItem(Base):
     """`Coordi_Items` 테이블 모델."""
 
-    __tablename__ = "Coordi_Items"
+    __tablename__ = "coordi_items"
     __table_args__ = (
         PrimaryKeyConstraint("coordi_id", "item_id"),
         Index("idx_coordi_items_item", "item_id"),
@@ -21,12 +21,12 @@ class CoordiItem(Base):
 
     coordi_id = Column(
         BigInteger,
-        ForeignKey("Coordis.coordi_id", ondelete="CASCADE"),
+        ForeignKey("coordis.coordi_id", ondelete="CASCADE"),
         nullable=False,
     )
     item_id = Column(
         BigInteger,
-        ForeignKey("Items.item_id", ondelete="CASCADE"),
+        ForeignKey("items.item_id", ondelete="CASCADE"),
         nullable=False,
     )
 
