@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import sys
+import traceback
 from pathlib import Path
 
 # 프로젝트 루트를 Python 경로에 추가
@@ -44,7 +45,7 @@ SEASON_MAP = {
 # 스타일 변환: 한국어 -> 영어
 STYLE_MAP = {
     "캐주얼": "casual",
-    "스트리트": "street",
+    "스트릿": "street",
     "스포티": "sporty",
     "미니멀": "minimal",
 }
@@ -79,7 +80,7 @@ def get_or_create_item(
     purchase_url: str,
 ) -> Item:
     """
-    아이템이 존재하면 조회하고, 없으면 생성한다.
+    아이템이 존재하면 업데이트하고, 없으면 생성한다.
     
     Args:
         db: 데이터베이스 세션
@@ -99,33 +100,53 @@ def get_or_create_item(
         select(Item).where(Item.item_id == item_id)
     ).scalar_one_or_none()
     
-    if existing_item:
-        return existing_item
-    
     # 카테고리 변환
     item_type = CATEGORY_MAP.get(category, "top")  # 기본값: top
     
-    # 아이템 생성 (item_id 직접 지정)
-    item = Item(
-        item_id=item_id,  # 직접 ID 지정
-        item_name=name,
-        category=item_type,
-        brand_name_ko=brand,
-        price=float(price) if price else None,
-        purchase_url=purchase_url,
-    )
+    if existing_item:
+        # 기존 아이템이 있으면 필드 업데이트 (덮어쓰기)
+        existing_item.item_name = name
+        existing_item.category = item_type
+        existing_item.brand_name_ko = brand
+        existing_item.price = float(price) if price else None
+        existing_item.purchase_url = purchase_url
+        
+        item = existing_item
+    else:
+        # 아이템 생성 (item_id 직접 지정)
+        item = Item(
+            item_id=item_id,  # 직접 ID 지정
+            item_name=name,
+            category=item_type,
+            brand_name_ko=brand,
+            price=float(price) if price else None,
+            purchase_url=purchase_url,
+        )
+        db.add(item)
     
-    db.add(item)
     db.flush()  # item_id를 DB에 확정
     
-    # 아이템 이미지 생성
+    # 아이템 이미지 처리 (중복 체크)
     if image_url:
-        item_image = ItemImage(
-            item_id=item.item_id,
-            image_url=image_url,
-            is_main=True,  # 첫 번째 이미지를 메인으로
-        )
-        db.add(item_image)
+        # 기존 메인 이미지 확인
+        existing_image = db.execute(
+            select(ItemImage).where(
+                ItemImage.item_id == item.item_id,
+                ItemImage.is_main == True,
+            )
+        ).scalar_one_or_none()
+        
+        if existing_image:
+            # 기존 이미지가 있으면 URL 업데이트
+            existing_image.image_url = image_url
+        else:
+            # 기존 이미지가 없으면 새로 생성
+            item_image = ItemImage(
+                item_id=item.item_id,
+                image_url=image_url,
+                is_main=True,  # 첫 번째 이미지를 메인으로
+            )
+            db.add(item_image)
     
     return item
 
@@ -142,7 +163,7 @@ def create_coordi(
     description: str,
 ) -> Coordi:
     """
-    코디를 생성한다.
+    코디를 생성하거나 업데이트한다. (ID가 같으면 덮어쓰기)
     
     Args:
         db: 데이터베이스 세션
@@ -163,10 +184,6 @@ def create_coordi(
         select(Coordi).where(Coordi.coordi_id == outfit_id)
     ).scalar_one_or_none()
     
-    if existing_coordi:
-        # 기존 코디가 있으면 관계만 업데이트
-        return existing_coordi
-    
     # 데이터 변환
     gender_normalized = normalize_gender(gender)
     season_english = SEASON_MAP.get(season, "spring")  # 기본값: spring
@@ -182,27 +199,49 @@ def create_coordi(
         except Exception as e:
             print(f"Warning: Embedding 생성 실패 (코디 ID {outfit_id}): {e}")
     
-    # 코디 생성 (coordi_id 직접 지정)
-    coordi = Coordi(
-        coordi_id=outfit_id,  # 직접 ID 지정
-        gender=gender_normalized,
-        season=season_english,
-        style=style_english,
-        description=description,
-        description_embedding=description_embedding,
-    )
+    if existing_coordi:
+        # 기존 코디가 있으면 필드 업데이트 (덮어쓰기)
+        existing_coordi.gender = gender_normalized
+        existing_coordi.season = season_english
+        existing_coordi.style = style_english
+        existing_coordi.description = description
+        existing_coordi.description_embedding = description_embedding
+        coordi = existing_coordi
+    else:
+        # 코디 생성 (coordi_id 직접 지정)
+        coordi = Coordi(
+            coordi_id=outfit_id,  # 직접 ID 지정
+            gender=gender_normalized,
+            season=season_english,
+            style=style_english,
+            description=description,
+            description_embedding=description_embedding,
+        )
+        db.add(coordi)
     
-    db.add(coordi)
     db.flush()  # coordi_id를 DB에 확정
     
-    # 코디 이미지 생성
+    # 코디 이미지 처리 (중복 체크)
     if image_url:
-        coordi_image = CoordiImage(
-            coordi_id=coordi.coordi_id,
-            image_url=image_url,
-            is_main=True,
-        )
-        db.add(coordi_image)
+        # 기존 메인 이미지 확인
+        existing_image = db.execute(
+            select(CoordiImage).where(
+                CoordiImage.coordi_id == coordi.coordi_id,
+                CoordiImage.is_main == True,
+            )
+        ).scalar_one_or_none()
+        
+        if existing_image:
+            # 기존 이미지가 있으면 URL 업데이트
+            existing_image.image_url = image_url
+        else:
+            # 기존 이미지가 없으면 새로 생성
+            coordi_image = CoordiImage(
+                coordi_id=coordi.coordi_id,
+                image_url=image_url,
+                is_main=True,
+            )
+            db.add(coordi_image)
     
     # 아이템들 처리 및 관계 생성
     for item_data in items:
@@ -308,6 +347,9 @@ def load_coordis_from_json(json_file_path: str) -> None:
                 error_count += 1
                 outfit_id = coordi_data.get("outfit_id", "알 수 없음")
                 print(f"[{idx}/{total_count}] ✗ 코디 ID {outfit_id}: {str(e)}")
+                print("상세 에러 로그:")
+                traceback.print_exc()
+                print("-" * 50)
         
         # 결과 요약
         print(f"\n{'='*50}")
