@@ -306,12 +306,33 @@ def load_coordis_from_json(json_file_path: str) -> None:
         success_count = 0
         error_count = 0
         
-        print(f"총 {total_count}개의 코디를 삽입합니다...\n")
+        # DB에서 가장 마지막에 저장된 코디 ID 조회
+        last_coordi_id = db.execute(
+            select(Coordi.coordi_id).order_by(Coordi.coordi_id.desc()).limit(1)
+        ).scalar_one_or_none()
+        
+        if last_coordi_id is None:
+            last_coordi_id = 0
+            print("DB가 비어있습니다. ID 1부터 시작합니다.")
+        else:
+            print(f"마지막 저장된 코디 ID: {last_coordi_id}")
+            print(f"ID {last_coordi_id + 1}부터 시작합니다.")
+        
+        # "제일 마지막부터 데이터를 3201로 매핑" -> 역순 처리
+        print("데이터를 역순으로 처리합니다...")
+        coordis_data.reverse()
+        
+        print(f"총 {total_count}개의 코디를 처리합니다...\n")
         
         # 각 코디 삽입
+        current_id = last_coordi_id + 1
+        
         for idx, coordi_data in enumerate(coordis_data, 1):
             try:
-                outfit_id = int(coordi_data["outfit_id"])
+                # JSON의 outfit_id는 무시하고 새로운 ID 부여
+                original_outfit_id = coordi_data.get("outfit_id")
+                outfit_id = current_id
+                
                 gender = coordi_data.get("gender", "FEMALE")
                 image_url = coordi_data.get("image_url", "")
                 detail_url = coordi_data.get("detail_url", "")
@@ -338,9 +359,12 @@ def load_coordis_from_json(json_file_path: str) -> None:
                 
                 success_count += 1
                 print(
-                    f"[{idx}/{total_count}] ✓ 코디 ID: {coordi.coordi_id}, "
+                    f"[{idx}/{total_count}] ✓ New ID: {coordi.coordi_id} (Original: {original_outfit_id}), "
                     f"아이템 {len(items)}개, 스타일: {coordi.style}"
                 )
+                
+                current_id += 1
+                
                 
             except Exception as e:
                 db.rollback()
@@ -353,7 +377,7 @@ def load_coordis_from_json(json_file_path: str) -> None:
         
         # 결과 요약
         print(f"\n{'='*50}")
-        print(f"완료: {success_count}개 성공, {error_count}개 실패")
+        print(f"완료: {success_count}개 성공, {error_count}개 실패, {skipped_count}개 스킵됨")
         print(f"{'='*50}")
         
     except FileNotFoundError:

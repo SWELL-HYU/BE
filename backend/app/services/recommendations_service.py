@@ -217,7 +217,7 @@ async def _get_cold_recommended_coordi_ids(
     
     # 5. 쿼리 임베딩 생성 (cold_start.py 로직 참고: text_weight=10.0)
     text_weight = 10.0
-    query_embedding = hashtags_embedding * text_weight + image_embedding_sum
+    query_embedding = hashtags_embedding + image_embedding_sum * text_weight
     
     # 정규화 (코사인 유사도 계산 시 필요)
     norm = np.linalg.norm(query_embedding)

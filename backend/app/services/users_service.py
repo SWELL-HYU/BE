@@ -11,7 +11,7 @@ from pathlib import Path
 
 import aiofiles
 from fastapi import UploadFile
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.core.exceptions import (
@@ -92,55 +92,17 @@ def get_preferences_options_data(
         for tag in tags
     ]
 
-    # TODO: 하드코딩한 값이니, 변경이 생길 경우 반드시 교체
-    # 성별에 따른 예시 코디 ID 필터링
-    # 남자 코디 10개
-    male_coordi_ids = [
-        1438047372096127182,
-        1438050658717615145,
-        1440632826790372313,
-        1432261617683781306,
-        1441363312562352773,
-        1437685886030622206,
-        1438129953480057346,
-        1434470090269916402,
-        1434889077588442216,
-        1434903191551269505,
-    ]
-    # 여자 코디 10개
-    female_coordi_ids = [
-        1440978364617105571,
-        1438118635197050864,
-        1442495043165125647,
-        1440256083999133220,
-        1438892987386383965,
-        1438907255408718529,
-        1438476711227292678,
-        1438487289000337970,
-        1438477585693402900,
-        1440686744765890806,
-    ]
-    
-    # 성별에 따라 코디 ID 선택
-    if gender == "male":
-        allowed_coordi_ids = male_coordi_ids
-    elif gender == "female":
-        allowed_coordi_ids = female_coordi_ids
-    else:
-        # 성별이 없으면 모든 코디 반환 (기존 동작 유지)
-        allowed_coordi_ids = None
-    
-    # 예시 코디 조회 (성별에 따라 필터링, ID 순으로 정렬)
-    if allowed_coordi_ids is not None:
-        coordis = db.execute(
-            select(Coordi)
-            .where(Coordi.coordi_id.in_(allowed_coordi_ids))
-            .order_by(Coordi.coordi_id)
-        ).scalars().all()
-    else:
-        coordis = db.execute(
-            select(Coordi).order_by(Coordi.coordi_id).limit(20)
-        ).scalars().all()
+    # 성별에 따른 예시 코디 조회 (랜덤 10개)
+    query = select(Coordi)
+
+    if gender:
+        # DB에는 소문자로 저장됨 ("male", "female")
+        query = query.where(Coordi.gender == gender.lower())
+
+    # 랜덤하게 10개 선택
+    coordis = db.execute(
+        query.order_by(func.random()).limit(10)
+    ).scalars().all()
 
     # 예시 코디 옵션 페이로드 생성
     sample_outfits = []

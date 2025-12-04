@@ -4,15 +4,20 @@
 
 ## 사용법
 
-### 아이템 데이터 삽입
+### 데이터 시딩 (Seed Data)
+
+테스트를 위한 가상 사용자 및 상호작용 데이터를 생성합니다.
 
 ```bash
 # backend 디렉토리에서 실행
-python scripts/load_items.py data/items.json
-
-# 또는 Python 모듈로 실행
-python -m scripts.load_items data/items.json
+python scripts/seed_data.py
 ```
+
+**기능:**
+- 가상 사용자 100명 생성
+- 사용자별 선호 태그 및 코디 취향 생성
+- 브라우징 상호작용(like/skip) 및 시청 로그 생성
+- 'like'한 코디의 아이템을 가상 옷장에 저장
 
 ### 코디 데이터 삽입
 
@@ -33,24 +38,11 @@ python scripts/load_tags.py data/tags_sample.json
 
 **데이터 파일 위치:**
 - 모든 데이터 파일은 `backend/data/` 디렉토리에 저장합니다.
-- 예: `backend/data/items.json`, `backend/data/coordis.json` 등
+- 예: `backend/data/coordis.json` 등
 
 ## 데이터 파일 형식
 
-### items.json 예시
 
-```json
-[
-  {
-    "category": "top",
-    "brand": "유니클로",
-    "name": "린넨 반팔 셔츠",
-    "price": 39000,
-    "imageUrl": "/images/items/item_001.png",
-    "purchaseUrl": "https://www.uniqlo.com/kr/..."
-  }
-]
-```
 
 ### coordis.json 예시
 
@@ -93,3 +85,15 @@ python scripts/load_tags.py data/tags_sample.json
     - 시즌: "봄" → "spring", "여름" → "summer", "가을" → "fall", "겨울" → "winter"
     - 스타일: "캐주얼" → "casual", "스트리트" → "street", "스포티" → "sporty", "미니멀" → "minimal"
 
+### 데이터 내보내기 (Export Data)
+
+데이터베이스에 저장된 사용자 상호작용 및 시청 로그 데이터를 CSV 파일로 내보냅니다.
+
+```bash
+# backend 디렉토리에서 실행
+python scripts/export_data.py
+```
+
+**생성되는 파일:**
+- `user_outfit_interaction.csv`: 사용자-코디 상호작용 데이터 (interaction: 'like', 'preference', 'skip')
+- `user_outfit_view_time.csv`: 사용자-코디 시청 시간 데이터 (view_time_seconds: 초 단위)
