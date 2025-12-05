@@ -43,11 +43,11 @@ from app.core.security import hash_password
     - 한 코디에 포함된 아이템 중 1-3개를 랜덤으로 선택해 UserClosetItem에 저장
 
 생성된 데이터
-- 사용자 (Users): 108명 (기존 사용자 포함)
-- 상호작용 (Interactions): 8,223건
-- 시청 로그 (View Logs): 7,718건
-- 선호 태그 (Preferred Tags): 657건
-- 저장된 아이템 (Closet Items): 1,470건
+- 사용자 (Users): 100명
+- 상호작용 (Interactions): 7,903건
+- 시청 로그 (View Logs): 7,403건
+- 선호 태그 (Preferred Tags): 612건
+- 저장된 아이템 (Closet Items): 1,288건
 """
 
 def seed_data():

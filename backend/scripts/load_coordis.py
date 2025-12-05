@@ -305,6 +305,7 @@ def load_coordis_from_json(json_file_path: str) -> None:
         total_count = len(coordis_data)
         success_count = 0
         error_count = 0
+        skipped_count = 0
         
         # DB에서 가장 마지막에 저장된 코디 ID 조회
         last_coordi_id = db.execute(
@@ -318,9 +319,9 @@ def load_coordis_from_json(json_file_path: str) -> None:
             print(f"마지막 저장된 코디 ID: {last_coordi_id}")
             print(f"ID {last_coordi_id + 1}부터 시작합니다.")
         
-        # "제일 마지막부터 데이터를 3201로 매핑" -> 역순 처리
-        print("데이터를 역순으로 처리합니다...")
-        coordis_data.reverse()
+        # "제일 마지막부터 데이터를 3201로 매핑" -> 역순 처리 (제거됨)
+        # print("데이터를 역순으로 처리합니다...")
+        # coordis_data.reverse()
         
         print(f"총 {total_count}개의 코디를 처리합니다...\n")
         
