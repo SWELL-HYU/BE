@@ -185,18 +185,19 @@ async def _get_cold_recommended_coordi_ids(
     
     # 3. 선택한 코디들의 description_embedding 합산
     if sample_coordi_ids:
-        sample_coordis = db.execute(
-            select(Coordi)
+        # 필요한 컬럼만 조회: select(Coordi) -> select(Coordi.description_embedding)
+        sample_embeddings = db.execute(
+            select(Coordi.description_embedding)
             .where(Coordi.coordi_id.in_(sample_coordi_ids))
             .where(Coordi.description_embedding.isnot(None))
         ).scalars().all()
         
         # description_embedding 합산
         embeddings = []
-        for coordi in sample_coordis:
-            if coordi.description_embedding is not None:
+        for embedding in sample_embeddings:
+            if embedding is not None:
                 # Vector 타입을 리스트로 변환
-                embedding_list = list(coordi.description_embedding)
+                embedding_list = list(embedding)
                 embeddings.append(np.array(embedding_list, dtype=float))
         
         if embeddings:

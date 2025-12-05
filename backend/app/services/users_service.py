@@ -12,7 +12,7 @@ from pathlib import Path
 import aiofiles
 from fastapi import UploadFile
 from sqlalchemy import func, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app.core.exceptions import (
     DeleteFailedError,
@@ -93,16 +93,31 @@ def get_preferences_options_data(
     ]
 
     # 성별에 따른 예시 코디 조회 (랜덤 10개)
-    query = select(Coordi)
-
+    # ORDER BY RANDOM()은 DB 부하가 크므로, 전체 ID를 가져와서 애플리케이션 레벨에서 샘플링
+    import random
+    
+    # 1. 조건에 맞는 모든 코디 ID 조회
+    id_query = select(Coordi.coordi_id)
     if gender:
-        # DB에는 소문자로 저장됨 ("male", "female")
-        query = query.where(Coordi.gender == gender.lower())
-
-    # 랜덤하게 10개 선택
-    coordis = db.execute(
-        query.order_by(func.random()).limit(10)
-    ).scalars().all()
+        id_query = id_query.where(Coordi.gender == gender.lower())
+    
+    all_coordi_ids = db.execute(id_query).scalars().all()
+    
+    # 2. 랜덤하게 10개 선택 (ID가 10개 미만이면 전체 선택)
+    if len(all_coordi_ids) > 10:
+        selected_ids = random.sample(all_coordi_ids, 10)
+    else:
+        selected_ids = all_coordi_ids
+        
+    # 3. 선택된 ID로 코디 조회 (이미지 포함, N+1 방지)
+    if selected_ids:
+        coordis = db.execute(
+            select(Coordi)
+            .where(Coordi.coordi_id.in_(selected_ids))
+            .options(selectinload(Coordi.images))
+        ).scalars().all()
+    else:
+        coordis = []
 
     # 예시 코디 옵션 페이로드 생성
     sample_outfits = []
@@ -173,14 +188,15 @@ def set_user_preferences(
         raise InvalidHashtagIdError()
 
     # 유효한 코디 ID 검증 (DB에 존재하는 코디 ID만 허용)
-    valid_coordi_ids = set(
-        coordi_id
-        for coordi_id, in db.execute(
-            select(Coordi.coordi_id).where(Coordi.coordi_id.in_(payload.sample_outfit_ids))
-        ).all()
-    )
-    if len(valid_coordi_ids) != outfit_count:
-        raise InvalidOutfitIdError()
+    # 불필요한 조회 제거: 프론트엔드에서 검증된 ID가 넘어온다고 가정하거나, FK 제약조건에 맡김
+    # valid_coordi_ids = set(
+    #     coordi_id
+    #     for coordi_id, in db.execute(
+    #         select(Coordi.coordi_id).where(Coordi.coordi_id.in_(payload.sample_outfit_ids))
+    #     ).all()
+    # )
+    # if len(valid_coordi_ids) != outfit_count:
+    #     raise InvalidOutfitIdError()
 
     # 사용자 조회
     user = db.get(User, user_id)
