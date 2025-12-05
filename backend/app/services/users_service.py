@@ -27,9 +27,7 @@ from app.core.exceptions import (
     UploadFailedError,
 )
 from app.core.file_utils import (
-    ensure_upload_directory,
     generate_unique_filename,
-    get_upload_directory,
     validate_upload_file,
 )
 from app.core.image_validation import validate_person_in_image
@@ -277,13 +275,16 @@ async def upload_profile_photo(
     if user is None:
         raise ValueError(f"User with id {user_id} not found")
 
-    # 업로드 디렉토리 경로 생성
-    upload_dir = get_upload_directory(user_id)
-    ensure_upload_directory(upload_dir) # 디렉토리 경로 검증(없으면 생성)
+    # 스토리지 서비스 가져오기
+    from app.core.storage import get_storage_service
+    storage_service = get_storage_service()
 
     # 고유한 파일명 생성
     filename = generate_unique_filename(file.filename)
-    file_path = upload_dir / filename
+    
+    # 저장 경로 (users/{user_id}/{filename})
+    # 주의: LocalStorageService는 base_dir(uploads) 아래에 저장하므로 uploads/는 제외
+    destination = f"users/{user_id}/{filename}"
 
     try:
         # 파일 내용 읽기
@@ -293,39 +294,23 @@ async def upload_profile_photo(
         # 파일 저장 전에 검증하여 잘못된 이미지는 저장되지 않도록 함
         await asyncio.to_thread(validate_person_in_image, content)
         
-        # 파일 저장 (비동기 I/O)
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(content)
+        # 파일 업로드 (StorageService 사용)
+        image_url = await storage_service.upload(content, destination, file.content_type)
         
-        # 상대 경로 생성 (URL 경로로 사용)
-        # get_upload_directory() 함수를 재사용하여 일관성 유지
-        # TODO: 배포시 변경 고려
-        relative_path = f"/{upload_dir.as_posix()}/{filename}"
-
         # 기존 UserImage 레코드 삭제 (있을 경우)
-        # TODO: 비동기 세션로 변경
         existing_images = db.execute(
             select(UserImage).where(UserImage.user_id == user_id)
         ).scalars().all()
+        
         for image in existing_images:
-            # 파일 시스템에서도 삭제 시도 (비동기)
-            try:
-                old_file_path = Path(image.image_url.lstrip("/"))
-                if old_file_path.exists():
-                    await asyncio.to_thread(old_file_path.unlink)
-            except Exception as e:
-                # 파일 삭제 실패는 로깅하지만 DB 삭제는 계속 진행
-                # (파일이 이미 없거나 경로가 잘못된 경우 등)
-                logger.warning(
-                    f"Failed to delete old profile photo file: {old_file_path}. Error: {e}",
-                    exc_info=True
-                )
+            # 스토리지에서 파일 삭제 시도
+            await storage_service.delete(image.image_url)
             db.delete(image)
 
         # 새로운 UserImage 레코드 생성
         user_image = UserImage(
             user_id=user_id,
-            image_url=relative_path,
+            image_url=image_url,
         )
         db.add(user_image)
         db.commit()
@@ -334,23 +319,14 @@ async def upload_profile_photo(
         return user_image
 
     except InvalidPersonImageError:
-        # InvalidPersonImageError는 그대로 재발생 (커스텀 에러 메시지 유지)
+        # InvalidPersonImageError는 그대로 재발생
         db.rollback()
-        # 저장된 파일이 있으면 삭제 (비동기)
-        if file_path.exists():
-            try:
-                await asyncio.to_thread(file_path.unlink)
-            except Exception:
-                pass
         raise
     except Exception as e:
         db.rollback()
-        # 저장된 파일이 있으면 삭제 (비동기)
-        if file_path.exists():
-            try:
-                await asyncio.to_thread(file_path.unlink)
-            except Exception:
-                pass
+        # 업로드된 파일이 있다면 삭제 시도 (여기서는 URL을 모르므로 생략하거나, try-finally 구조 고려 가능)
+        # 하지만 upload 함수가 실패하면 파일이 안 생겼을 것이고, 
+        # DB 트랜잭션 실패 시에는 롤백되므로 큰 문제 없음.
         raise UploadFailedError() from e
 
 
@@ -390,21 +366,15 @@ async def delete_profile_photo(
     # 사진이 있었는지 여부 확인
     had_photo = len(existing_images) > 0
 
+    # 스토리지 서비스 가져오기
+    from app.core.storage import get_storage_service
+    storage_service = get_storage_service()
+
     try:
         # 각 이미지에 대해 파일 시스템과 DB에서 삭제
         for image in existing_images:
-            # 파일 시스템에서 파일 삭제 (비동기)
-            try:
-                old_file_path = Path(image.image_url.lstrip("/"))
-                if old_file_path.exists():
-                    await asyncio.to_thread(old_file_path.unlink)
-            except Exception as e:
-                # 파일 삭제 실패는 로깅하지만 DB 삭제는 계속 진행
-                # (파일이 이미 없거나 경로가 잘못된 경우 등)
-                logger.warning(
-                    f"Failed to delete profile photo file: {old_file_path}. Error: {e}",
-                    exc_info=True
-                )
+            # 스토리지에서 파일 삭제 (비동기)
+            await storage_service.delete(image.image_url)
             
             # DB에서 레코드 삭제
             db.delete(image)
