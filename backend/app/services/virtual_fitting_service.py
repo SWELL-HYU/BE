@@ -30,7 +30,6 @@ from app.core.exceptions import (
     PhotoRequiredError,
     TooManyItemsError,
 )
-from app.core.file_utils import ensure_upload_directory
 from app.models.fitting_result import FittingResult
 from app.models.fitting_result_image import FittingResultImage
 from app.models.fitting_result_item import FittingResultItem
@@ -617,19 +616,15 @@ async def _process_virtual_fitting_async(
         )
         
         # 5. 결과 이미지 저장
-        # TODO: 배포시 저장 경로 수정
-        upload_dir = Path("uploads") / "fitting"
-        ensure_upload_directory(upload_dir)
+        # 스토리지 서비스 가져오기
+        from app.core.storage import get_storage_service
+        storage_service = get_storage_service()
         
         filename = f"fitting_{fitting_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.png"
-        file_path = upload_dir / filename
+        destination = f"fitting/{filename}"
         
-        # 비동기 파일 저장
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(final_image_bytes)
-        
-        # 상대 경로 생성 (URL용)
-        relative_path = f"/{upload_dir.as_posix()}/{filename}"
+        # 파일 업로드 (StorageService 사용)
+        image_url = await storage_service.upload(final_image_bytes, destination, "image/png")
         
         # 6. FittingResult 상태 업데이트 및 이미지 저장
         fitting_result.status = "completed"
@@ -640,7 +635,7 @@ async def _process_virtual_fitting_async(
         
         fitting_result_image = FittingResultImage(
             fitting_id=fitting_id,
-            image_url=relative_path,
+            image_url=image_url,
         )
         db.add(fitting_result_image)
         
