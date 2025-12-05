@@ -59,6 +59,10 @@ app.include_router(api_router, prefix="/api")
 @app.on_event("startup")
 async def startup_event():
     init_db()
+    # 모델 프리로딩 (Singleton 초기화)
+    from app.services.embedding_service import EmbeddingService
+    EmbeddingService()
+    logging.info("Embedding model loaded successfully")
 
 
 @app.get("/")
