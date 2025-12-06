@@ -46,6 +46,19 @@ from app.schemas.users import (
 logger = logging.getLogger(__name__)
 
 
+def _get_season_from_month(month: int) -> str:
+    """
+    월(month)을 기준으로 영어 season 레이블을 반환합니다.
+    """
+    if month in (12, 1, 2):
+        return "winter"
+    if month in (3, 4, 5):
+        return "spring"
+    if month in (6, 7, 8):
+        return "summer"
+    return "fall"
+
+
 def get_preferences_options_data(
     db: Session,
     gender: str | None = None,
@@ -95,7 +108,11 @@ def get_preferences_options_data(
     import random
     
     # 1. 조건에 맞는 모든 코디 ID 조회
-    id_query = select(Coordi.coordi_id)
+    # 현재 날짜 기준 계절 필터 적용
+    current_month = datetime.now().month
+    current_season = _get_season_from_month(current_month)
+
+    id_query = select(Coordi.coordi_id).where(Coordi.season == current_season)
     if gender:
         id_query = id_query.where(Coordi.gender == gender.lower())
     
