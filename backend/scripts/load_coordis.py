@@ -24,7 +24,7 @@ from app.models.coordi_image import CoordiImage
 from app.models.coordi_item import CoordiItem
 from app.models.item import Item
 from app.models.item_image import ItemImage
-from app.services.embedding_service import EmbeddingService
+from app.models.item_image import ItemImage
 
 
 # 카테고리 변환: 한국어 -> 영어
@@ -56,17 +56,6 @@ def normalize_gender(gender: str) -> str:
     return gender.lower() if gender else "female"
 
 
-# 전역 embedding 서비스 인스턴스 (한 번만 로드)
-_embedding_service = None
-
-def get_embedding_service() -> EmbeddingService:
-    """Embedding 서비스 싱글톤"""
-    global _embedding_service
-    if _embedding_service is None:
-        print("Embedding 모델 로딩 중... (처음 실행 시 시간이 걸릴 수 있습니다)")
-        _embedding_service = EmbeddingService()
-        print("Embedding 모델 로드 완료!")
-    return _embedding_service
 
 
 def get_or_create_item(
@@ -189,15 +178,8 @@ def create_coordi(
     season_english = SEASON_MAP.get(season, "spring")  # 기본값: spring
     style_english = STYLE_MAP.get(style, "casual")  # 기본값: casual
     
-    # Description embedding 생성
     description_embedding = None
-    if description:
-        try:
-            embedding_service = get_embedding_service()
-            embedding_vector = embedding_service.generate_embedding(description)
-            description_embedding = embedding_vector
-        except Exception as e:
-            print(f"Warning: Embedding 생성 실패 (코디 ID {outfit_id}): {e}")
+    # 임베딩 생성은 별도 배치 스크립트로 처리 (untitled0.py -> update_embeddings.py)
     
     if existing_coordi:
         # 기존 코디가 있으면 필드 업데이트 (덮어쓰기)
