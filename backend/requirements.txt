@@ -35,6 +35,5 @@ mediapipe>=0.10.0  # 포즈 검증용
 # --- Async file I/O ---
 aiofiles==24.1.0
 
-
 # --- Cloud Storage ---
 google-cloud-storage>=2.13.0
