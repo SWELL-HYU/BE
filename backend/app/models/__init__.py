@@ -13,6 +13,8 @@ from app.models.user import User
 from app.models.user_closet_item import UserClosetItem
 from app.models.user_coordi_interaction import UserCoordiInteraction
 from app.models.user_coordi_view_log import UserCoordiViewLog
+from app.models.user_embedding import UserEmbedding
+from app.models.item_embedding import ItemEmbedding
 from app.models.user_image import UserImage
 from app.models.user_preferred_tag import UserPreferredTag
 
@@ -32,4 +34,6 @@ __all__ = [
     "UserCoordiViewLog",
     "UserClosetItem",
     "UserPreferredTag",
+    "UserEmbedding",
+    "ItemEmbedding",
 ]

@@ -225,8 +225,8 @@ async def _get_cold_recommended_coordi_ids(
     if norm > 0:
         query_embedding = query_embedding / norm
     else:
-        # 정규화 불가능하면 기본 추천으로 fallback
-        return await _get_recommended_coordi_ids_temporary(db, user_id, page, limit)
+        # 정규화 불가능하면 (데이터 부족) 빈 결과 반환 (Phase 1 제거)
+        return [], 0
     
     # 6. 사용자가 이미 본 코디 또는 상호작용한 코디 ID 조회 (제외할 코디)
     viewed_coordi_ids = db.execute(
@@ -279,6 +279,25 @@ async def _get_cold_recommended_coordi_ids(
     # <=> 연산자는 코사인 거리 (1 - 코사인 유사도)를 반환하므로, 작을수록 유사함
     # 벡터를 PostgreSQL 벡터 형식 문자열로 변환: '[1,2,3]'
     query_vector_str = "[" + ",".join(map(str, query_embedding_list)) + "]"
+
+    # [Warm Start Initialization]
+    # Cold Start 쿼리 임베딩을 'day_v1' 유저 임베딩으로 저장하여 Warm Start 전환 준비
+    try:
+        from app.models.user_embedding import UserEmbedding
+        # 기존 day_v1 임베딩 확인
+        existing_embedding = db.get(UserEmbedding, (user_id, 'day_v1'))
+        if not existing_embedding:
+            new_embedding = UserEmbedding(
+                user_id=user_id,
+                model_version='day_v1',
+                vector=query_embedding_list
+            )
+            db.add(new_embedding)
+            db.commit()
+            print(f"[Cold Start] Initialized day_v1 embedding for user {user_id}")
+    except Exception as e:
+        print(f"[Cold Start] Failed to initialize user embedding: {e}")
+        db.rollback()
     
     # text()를 사용하여 raw SQL 작성
     # db.execute()에 params로 파라미터 전달
@@ -432,14 +451,31 @@ async def get_recommended_coordis(
         raise ValueError(f"User with id {user_id} not found")
     
     # 2. 온보딩 상태에 따라 추천 방식 결정
+    coordi_ids = []
+    total_items = 0
+
     if user.has_completed_onboarding:
-        # 온보딩 완료: Cold recommendation (임베딩 기반)
+        # [Case 1] 온보딩 완료 -> Warm Start 시도 (DB/Model 기반)
+        try:
+            from app.services.warm_recommendation_service import get_warm_recommendation_service
+            warm_service = get_warm_recommendation_service()
+            
+            # Warm Service 호출 (유저 임베딩 없으면 [] 반환)
+            w_ids, w_total = warm_service.recommend(db, user_id, page, limit)
+            
+            if w_ids:
+                coordi_ids = w_ids
+                total_items = w_total
+                print(f"[Warm Start] User {user_id}: Found {len(coordi_ids)} recommendations.")
+        except Exception as e:
+            print(f"[Warm Start Error] Failed to get warm recommendations: {e}")
+            # 실패 시 아래 Cold Start로 폴백
+
+    # [Case 2] 결과가 없으면 (Warm Start 실패 or 온보딩 미완료) -> Cold Start (임베딩 기반)
+    if not coordi_ids:
+        # 온보딩 완료 여부와 관계없이 Cold Start 시도
+        # (온보딩 미완료라도 태그/취향 데이터가 조금이라도 있다면 추천 가능, 없으면 빈 리스트)
         coordi_ids, total_items = await _get_cold_recommended_coordi_ids(
-            db, user_id, page, limit
-        )
-    else:
-        # 온보딩 미완료: 임시 추천 (기존 로직)
-        coordi_ids, total_items = await _get_recommended_coordi_ids_temporary(
             db, user_id, page, limit
         )
     

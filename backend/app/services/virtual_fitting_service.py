@@ -245,8 +245,7 @@ def _generate_fitting_image_single_step_sync(
     person_or_result_mime_type: str,
     garment_image_bytes: bytes,
     garment_mime_type: str,
-    canvas_image_bytes: bytes,
-    canvas_mime_type: str,
+    garment_category: str,
 ) -> bytes | None:
     """
     동기 방식으로 Gemini API를 호출하여 단일 단계 가상 피팅 이미지를 생성합니다.
@@ -278,34 +277,46 @@ def _generate_fitting_image_single_step_sync(
         
         # 이미지 크기 로깅
         logger.info(f"Gemini API 호출 준비: person_size={len(person_or_result_image_bytes)} bytes, "
-                   f"garment_size={len(garment_image_bytes)} bytes, "
-                   f"canvas_size={len(canvas_image_bytes)} bytes")
+                   f"garment_size={len(garment_image_bytes)} bytes")
         
         # 이미지 크기 확인 (PIL로)
         try:
             person_img = Image.open(BytesIO(person_or_result_image_bytes))
             garment_img = Image.open(BytesIO(garment_image_bytes))
-            canvas_img = Image.open(BytesIO(canvas_image_bytes))
-            logger.info(f"이미지 크기: person={person_img.size}, garment={garment_img.size}, canvas={canvas_img.size}")
+            logger.info(f"이미지 크기: person={person_img.size}, garment={garment_img.size}")
         except Exception as e:
             logger.warning(f"이미지 크기 확인 실패: {e}")
         
         client = Client(api_key=GEMINI_API_KEY)
         
-        # TODO: 프롬프트 구성 (단일 garment용)
-        # TODO: 진짜 무조건 바꿔야됨. 분기처리하던지 좀 싀발
+        # 카테고리별 프롬프트 분기 처리
+        if garment_category == "outer":
+            dressing_instruction = (
+                "ACTION [OUTERWEAR]: LAYER this garment ON TOP of the subject's existing outfit. "
+                "Do NOT remove the inner clothing (shirt/pants). "
+                "CRITICAL: Generate the outer garment in an OPEN/UNZIPPED state to visibly reveal the inner layers underneath. "
+                "Do not fully close zippers or buttons."
+            )
+        else:
+            # top or bottom
+            dressing_instruction = (
+                f"ACTION [{garment_category.upper()}]: COMPLETELY REPLACE the subject's existing {garment_category} with the target garment. "
+                f"Remove the original {garment_category} entirely and fit the new one naturally onto the body skin/shape."
+            )
+
         enhanced_prompt = (
-        "Role: You are an expert AI specialized in high-fidelity photorealistic virtual try-on and composite rendering.\n"
+        "Role: You are an expert AI specialized in high-fidelity photorealistic virtual try-on.\n"
             "Input structure:\n"
-            " - Image[1]: Reference Person (Subject to be dressed, anatomy and pose are ground truth)\n"
-            " - Image[2]: Garment Image (Target apparel with specific fabric texture and design)\n"
-            " - Image[3]: Background Canvas (Fixed dimension for final output)\n\n"
+            " - Image[1]: Reference Person (Subject to be dressed)\n"
+            " - Image[2]: Garment Image (Target apparel)\n\n"
 
             "Objective: Synthesize a photorealistic composite where the person in Image[1] wears the garment from Image[2]. "
-            "The result must be indistinguishable from a real photograph, placed onto Image[3] without altering canvas geometry.\n\n"
+            "The result must be indistinguishable from a real photograph.\n\n"
 
-            "Canvas priority: CRITICAL - The final composite must strictly match the dimensions of Image[3]. "
-            "Do NOT crop, resize, pad, shift, or transform the person relative to the canvas frame.\n\n"
+            f"{dressing_instruction}\n\n"
+
+            "Constraints: The final output must strictly match the dimensions and aspect ratio of Image[1]. "
+            "Do NOT crop, resize, pad, shift, or transform the person. Preserve the background exactly if possible.\n\n"
 
             "Garment dressing process: Map the garment onto the body topology using physics-based draping. "
             "Simulate gravity, material stiffness, and tension folds based on the pose. "
@@ -315,7 +326,7 @@ def _generate_fitting_image_single_step_sync(
             "Handle occlusions intelligently: if hair falls over shoulders, render the garment layer *under* the hair strands.\n\n"
 
             "Restrictions: No hallucinations of extra limbs, no distortion of face or hands, no blurring of garment textures. "
-            "Do not change the body shape or background dimensions.\n\n"
+            "Do not change the body shape.\n\n"
 
             "Output: A single high-resolution PNG integrating the dressed subject seamlessly with professional retouching quality."
         )
@@ -331,13 +342,7 @@ def _generate_fitting_image_single_step_sync(
             data=garment_image_bytes,
             mime_type=garment_mime_type
         )
-        canvas_part = types.Part.from_bytes(
-            data=canvas_image_bytes,
-            mime_type=canvas_mime_type
-        )
-        
-        # 콘텐츠 구성
-        contents = [enhanced_prompt, person_or_result_part, garment_part, canvas_part]
+        contents = [enhanced_prompt, person_or_result_part, garment_part]
         
         # Gemini API 호출
         logger.info(f"Gemini API 호출 시작: model={GEMINI_MODEL}")
@@ -467,7 +472,13 @@ async def _process_virtual_fitting_async(
     """
     try:
         logger.info(f"가상 피팅 처리 시작: fitting_id={fitting_id}, user_id={user_id}, items_count={len(items)}")
-        logger.info(f"아이템 목록: {[{'item_id': item.item_id, 'category': item.category} for item in items]}")
+        
+        # 아이템 처리 순서 강제: 상의 -> 하의 -> 아우터
+        # (상의를 먼저 입고 하의를 입는 것이 일반적, 아우터는 마지막에 위에 걸침)
+        priority = {"top": 1, "bottom": 2, "outer": 3}
+        items.sort(key=lambda x: priority.get(x.category, 99))
+        
+        logger.info(f"아이템 목록(정렬됨): {[{'item_id': item.item_id, 'category': item.category} for item in items]}")
         
         # 사용자 사진 조회
         user_image = db.execute(
@@ -537,20 +548,7 @@ async def _process_virtual_fitting_async(
             logger.info(f"아이템 이미지 다운로드 완료: item_id={item_request.item_id}, size={len(garment_bytes)} bytes, mime_type={garment_mime}")
             garment_results.append(result)
         
-        # 캔버스 생성
-        person_image = Image.open(BytesIO(person_image_bytes))
-        original_width, original_height = person_image.size
-        logger.info(f"사용자 이미지 크기: {original_width}x{original_height}, mode={person_image.mode}")
-        
-        canvas_mode = "RGBA" if person_image.mode == "RGBA" else "RGB"
-        canvas_fill = (255, 255, 255, 0) if canvas_mode == "RGBA" else (255, 255, 255)
-        canvas_image = Image.new(canvas_mode, (original_width, original_height), canvas_fill)
-        
-        with BytesIO() as buffer:
-            canvas_image.save(buffer, format="PNG")
-            canvas_image_bytes = buffer.getvalue()
-        canvas_mime_type = "image/png"
-        logger.info(f"캔버스 생성 완료: size={original_width}x{original_height}, canvas_size={len(canvas_image_bytes)} bytes")
+
         
         # 2. FittingResult 조회
         fitting_result = db.get(FittingResult, fitting_id)
@@ -582,8 +580,7 @@ async def _process_virtual_fitting_async(
                     current_mime_type,
                     garment_bytes,
                     garment_mime,
-                    canvas_image_bytes,
-                    canvas_mime_type,
+                    item.category,
                 )
                 
                 if result_image is None:

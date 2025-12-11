@@ -11,8 +11,10 @@ sqlalchemy2-stubs==0.0.2a38
 psycopg2-binary==2.9.9 # PostgreSQL 드라이버
 pgvector==0.2.3
 
-# --- Embedding ---
+# --- Embedding & ML ---
 sentence-transformers>=2.7.0
+torch>=2.0.0
+numpy>=1.24.0
 
 # --- Migrations ---
 alembic==1.13.2
@@ -37,3 +39,6 @@ aiofiles==24.1.0
 
 # --- Cloud Storage ---
 google-cloud-storage>=2.13.0
+
+# --- Scheduling ---
+APScheduler==3.10.4
