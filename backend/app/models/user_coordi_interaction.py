@@ -6,6 +6,7 @@
 
 from sqlalchemy import (
     BigInteger,
+    Boolean,
     Column,
     DateTime,
     Enum,
@@ -42,6 +43,7 @@ class UserCoordiInteraction(Base):
         Enum("like", "skip", "preference", name="coordi_action_enum"),
         nullable=False,
     )
+    is_trained = Column(Boolean, default=False, nullable=False, server_default="false")
     interacted_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship(

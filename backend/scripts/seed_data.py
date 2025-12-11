@@ -24,14 +24,14 @@ from app.core.security import hash_password
 추천팀을 위한 상호작용 데이터 제공
 
 데이터 설명
-- 총 100명의 가상 사용자
+- 총 400명의 가상 사용자
     - 코디 취향: 성별에 맞는 코디 5개를 랜덤으로 선택하여 선호(preference) 상호작용을 생성
     - 태그 취향: 성별에 따라 필터링된 태그(여성 1-18, 남성 19-25 + 공통) 중 3~10개를 랜덤으로 선택하여 UserPreferredTag에 저장
 
 - 상호 작용(Interaction) 생성
     - 사용자의 성별에 맞는 코디만 노출
     - 사용자별로 선호 스타일(1~2개)을 배정하고, 노출되는 코디의 70%가 해당 스타일과 일치하도록 하여 일관성을 유지
-    - 50~100개의 코디에 대해 like (10%의 확률) Skip (90%의 확률) 반응 생성
+    - 150~300개의 코디에 대해 like (10%의 확률) Skip (90%의 확률) 반응 생성
     - Cold-start에서 선택한 코디의 경우 preference 로 기록됨
 
 - 시청 시간(View Log) 생성
@@ -43,7 +43,7 @@ from app.core.security import hash_password
     - 한 코디에 포함된 아이템 중 1-3개를 랜덤으로 선택해 UserClosetItem에 저장
 
 생성된 데이터
-- 사용자 (Users): 100명
+- 사용자 (Users): 400명
 - 상호작용 (Interactions): 7,857건
 - 시청 로그 (View Logs): 7,357건
 - 선호 태그 (Preferred Tags): 627건
@@ -64,9 +64,9 @@ def seed_data():
         print(f"Found {coordi_count} coordis.")
 
         # 2. Create Users
-        print("Creating 100 users...")
+        print("Creating 400 users...")
         users = []
-        for i in range(100):
+        for i in range(400):
             email = f"user{i+1}@example.com"
             # Check if user exists
             existing_user = db.execute(select(User).where(User.email == email)).scalar_one_or_none()
@@ -195,7 +195,7 @@ def seed_data():
                 )
             ).scalar()
 
-            if existing_interaction_count < 50:
+            if existing_interaction_count < 150:
                 # Style Consistency: Pick 1-2 preferred styles
                 all_styles = list(set([c.style for c in target_coordis]))
                 preferred_styles = random.sample(all_styles, k=min(2, len(all_styles)))
@@ -212,7 +212,7 @@ def seed_data():
                               and c.coordi_id not in current_user_interacted_ids]
                 
                 if candidates:
-                    num_browsing = random.randint(50, 100)
+                    num_browsing = random.randint(150, 300)
                     
                     # Split candidates into preferred style and others
                     style_candidates = [c for c in candidates if c.style in preferred_styles]

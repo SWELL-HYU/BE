@@ -1,3 +1,4 @@
+
 """
 데이터 내보내기 스크립트 (export_data.py)
 
@@ -7,9 +8,11 @@
 생성되는 파일:
 1. user_outfit_interaction.csv: 
    - user_id, outfit_id, interaction
-   - user_embedding: user별 cold-start 로직으로 계산된 query embedding
-   - outfit_embedding: outfit의 description embedding
-2. user_outfit_view_time.csv: 사용자-코디 시청 시간 데이터 (view_time_seconds: 초 단위)
+2. user_embeddings.csv:
+   - user_id, user_embedding
+3. outfit_embeddings.csv:
+   - outfit_id, outfit_embedding
+4. user_outfit_view_time.csv: 사용자-코디 시청 시간 데이터 (view_time_seconds: 초 단위)
 """
 import sys
 import os
@@ -113,10 +116,11 @@ def export_data():
         print("Exporting data to CSV...")
 
         # 1. Export user_outfit_interaction.csv
-        # user_embedding, outfit_embedding 추가
+        # 임베딩 값은 별도의 CSV 파일(table)로 분리
         
-        # User별 임베딩 캐싱 (매번 계산하면 느리므로)
+        # Caches
         user_embedding_cache = {}
+        outfit_embedding_cache = {}
 
         # Coordi 테이블과 조인하여 바로 outfit_embedding 가져오기
         stmt = (
@@ -129,37 +133,62 @@ def export_data():
         print(f"Found {total_count} interactions. Processing...")
 
         with open('user_outfit_interaction.csv', 'w', newline='') as csvfile:
-            fieldnames = ['user_id', 'outfit_id', 'interaction', 'user_embedding', 'outfit_embedding']
+            # 임베딩 컬럼 제거
+            fieldnames = ['user_id', 'outfit_id', 'interaction']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
             writer.writeheader()
             
             for idx, (interaction, outfit_emb_vec) in enumerate(results):
                 user_id = interaction.user_id
+                outfit_id = interaction.coordi_id
                 
                 # Retrieve or calculate User Embedding
                 if user_id not in user_embedding_cache:
-                    # 진행 상황 출력을 줄이기 위해 조건부 출력
                     if len(user_embedding_cache) % 10 == 0:
                         print(f"Calculating embedding for User {user_id}...")
                     user_embedding_cache[user_id] = calculate_user_embedding(db, user_id, embedding_service)
                 
-                user_emb_list = user_embedding_cache[user_id]
-                
-                # Outfit Embedding (Vector to list)
-                outfit_emb_list = list(outfit_emb_vec) if outfit_emb_vec is not None else [0.0]*512
+                # Cache Outfit Embedding
+                if outfit_id not in outfit_embedding_cache:
+                    outfit_emb_list = list(outfit_emb_vec) if outfit_emb_vec is not None else [0.0]*512
+                    outfit_embedding_cache[outfit_id] = outfit_emb_list
                 
                 writer.writerow({
                     'user_id': user_id,
-                    'outfit_id': interaction.coordi_id,
-                    'interaction': interaction.action_type,
-                    'user_embedding': format_embedding(user_emb_list),
-                    'outfit_embedding': format_embedding(outfit_emb_list)
+                    'outfit_id': outfit_id,
+                    'interaction': interaction.action_type
                 })
                 
                 if (idx + 1) % 1000 == 0:
                     print(f"Processed {idx + 1}/{total_count} interactions")
                     
         print(f"Exported {total_count} rows to user_outfit_interaction.csv")
+
+        # 2. Export user_embeddings.csv
+        print(f"Exporting {len(user_embedding_cache)} user embeddings...")
+        with open('user_embeddings.csv', 'w', newline='') as csvfile:
+            fieldnames = ['user_id', 'user_embedding']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for uid, emb in user_embedding_cache.items():
+                writer.writerow({
+                    'user_id': uid,
+                    'user_embedding': format_embedding(emb)
+                })
+        print("Exported user_embeddings.csv")
+
+        # 3. Export outfit_embeddings.csv
+        print(f"Exporting {len(outfit_embedding_cache)} outfit embeddings...")
+        with open('outfit_embeddings.csv', 'w', newline='') as csvfile:
+            fieldnames = ['outfit_id', 'outfit_embedding']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            for oid, emb in outfit_embedding_cache.items():
+                writer.writerow({
+                    'outfit_id': oid,
+                    'outfit_embedding': format_embedding(emb)
+                })
+        print("Exported outfit_embeddings.csv")
 
         # 2. Export user_outfit_view_time.csv (기존 동일)
         view_logs = db.execute(select(UserCoordiViewLog)).scalars().all()
