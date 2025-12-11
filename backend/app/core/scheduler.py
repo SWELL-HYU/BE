@@ -35,11 +35,8 @@ def start_scheduler():
     """
     if not scheduler.running:
         # 매일 새벽 3시에 실행
-        # trigger = CronTrigger(hour=3, minute=0)
-        
-        # 테스트를 위해 1분마다 실행 (주석 처리)
-        trigger = CronTrigger(minute='*') 
-        
+        trigger = CronTrigger(hour=3, minute=0)
+    
         scheduler.add_job(
             train_night_model_job,
             trigger=trigger,
