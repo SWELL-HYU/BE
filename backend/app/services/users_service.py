@@ -179,9 +179,9 @@ def set_user_preferences(
     if hashtag_count > 10:
         raise TooManyHashtagsError()
 
-    # 코디 개수 검증 (정확히 5개)
+    # 코디 개수 검증 (1개 이상 5개 이하)
     outfit_count = len(payload.sample_outfit_ids)
-    if outfit_count < 5:
+    if outfit_count < 1:
         raise InsufficientOutfitsError()
     if outfit_count > 5:
         raise TooManyOutfitsError()

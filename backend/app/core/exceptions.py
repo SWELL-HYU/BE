@@ -221,23 +221,23 @@ class TooManyHashtagsError(AppException):
 
 # 코디 개수 부족 예외
 class InsufficientOutfitsError(AppException):
-    """정확히 5개의 코디를 선택해야 할 때 발생하는 예외."""
+    """최소 1개의 코디를 선택해야 할 때 발생하는 예외."""
 
     code = "INSUFFICIENT_OUTFITS"
     status_code = status.HTTP_400_BAD_REQUEST
 
     def __init__(self) -> None:
-        super().__init__(message="정확히 5개의 코디를 선택해야 합니다")
+        super().__init__(message="최소 1개의 코디를 선택해야 합니다")
 
 # 코디 개수 초과 예외
 class TooManyOutfitsError(AppException):
-    """정확히 5개의 코디를 선택해야 할 때 발생하는 예외."""
+    """최대 5개의 코디만 선택할 수 있을 때 발생하는 예외."""
 
     code = "TOO_MANY_OUTFITS"
     status_code = status.HTTP_400_BAD_REQUEST
 
     def __init__(self) -> None:
-        super().__init__(message="정확히 5개의 코디를 선택해야 합니다")
+        super().__init__(message="최대 5개의 코디만 선택할 수 있습니다")
 
 # 유효하지 않은 해시태그 ID 예외
 class InvalidHashtagIdError(AppException):
