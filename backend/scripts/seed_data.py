@@ -114,10 +114,18 @@ def seed_data():
             return [c.coordi_id for c in coordis if c.style in styles]
 
         # Tag definitions
-        female_tag_ids = list(range(1, 19))
-        male_common_tags = [2, 3, 4, 7, 10, 11, 12, 13, 14, 15, 16, 17, 18]
-        male_specific_tags = list(range(19, 26))
-        male_tag_ids = sorted(list(set(male_common_tags + male_specific_tags)))
+        # Tag definitions: Fetch real tag IDs from DB
+        all_tag_ids = db.execute(select(Tag.tag_id)).scalars().all()
+        
+        if not all_tag_ids:
+            print("Error: No tags found in database. Please run load_tags.py first.")
+            return
+
+        # Simple logic: split tags or use all available tags randomly
+        # Since we don't know exactly which ID maps to which concept without querying names,
+        # we will use the available valid IDs for both genders to avoid FK errors.
+        female_tag_ids = all_tag_ids 
+        male_tag_ids = all_tag_ids
 
         interaction_count = 0
         view_log_count = 0

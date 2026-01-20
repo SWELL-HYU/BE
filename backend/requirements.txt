@@ -37,4 +37,5 @@ aiofiles==24.1.0
 
 
 # --- Cloud Storage ---
-google-cloud-storage>=2.13.0
+
+boto3>=1.28.0

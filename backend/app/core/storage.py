@@ -8,9 +8,10 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Optional
 
+import io
 import aiofiles
-from google.cloud import storage
-from google.oauth2 import service_account
+import boto3
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
@@ -89,82 +90,104 @@ class LocalStorageService(StorageService):
             return False
 
 
-class GCSStorageService(StorageService):
-    """Google Cloud Storage 서비스"""
+class S3StorageService(StorageService):
+    """AWS S3 스토리지 서비스"""
 
-    def __init__(self, bucket_name: str, credentials_path: Optional[str] = None):
+    def __init__(
+        self,
+        aws_access_key_id: str,
+        aws_secret_access_key: str,
+        region_name: str,
+        bucket_name: str
+    ):
         self.bucket_name = bucket_name
+        self.region_name = region_name
         
-        if credentials_path and os.path.exists(credentials_path):
-            credentials = service_account.Credentials.from_service_account_file(credentials_path)
-            self.client = storage.Client(credentials=credentials)
-        else:
-            # 환경 변수(GOOGLE_APPLICATION_CREDENTIALS) 또는 기본 인증 사용
-            self.client = storage.Client()
-            
-        self.bucket = self.client.bucket(bucket_name)
+        # Boto3 Client 생성
+        self.s3_client = boto3.client(
+            's3',
+            aws_access_key_id=aws_access_key_id,
+            aws_secret_access_key=aws_secret_access_key,
+            region_name=region_name
+        )
 
     async def upload(self, content: bytes, destination: str, mime_type: str = "application/octet-stream") -> str:
-        # GCS는 동기 라이브러리이므로, 블로킹 방지를 위해 별도 스레드 등 고려 가능하지만
-        # 여기서는 간단히 구현 (필요 시 asyncio.to_thread 사용)
         import asyncio
         
         def _upload_sync():
-            blob = self.bucket.blob(destination)
-            blob.upload_from_string(content, content_type=mime_type)
-            # 공개 URL 반환 (버킷이 공개 설정되어 있다고 가정)
-            # 또는 blob.public_url 사용
-            return f"https://storage.googleapis.com/{self.bucket_name}/{destination}"
+            file_obj = io.BytesIO(content)
+            try:
+                # S3 업로드 (Content-Type 설정)
+                self.s3_client.upload_fileobj(
+                    file_obj,
+                    self.bucket_name,
+                    destination, # destination is the filename/key
+                    ExtraArgs={'ContentType': mime_type} # ACL='public-read' 제거 (버킷 정책 권장)
+                )
+                
+                # 퍼블릭 URL 생성 (가상 호스팅 방식)
+                # https://{bucket_name}.s3.{region_name}.amazonaws.com/{filename}
+                url = f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com/{destination}"
+                
+                logger.info(f"S3 upload success: {url}")
+                return url
+                
+            except ClientError as e:
+                logger.error(f"S3 upload failed: {e}")
+                raise
 
         try:
             url = await asyncio.to_thread(_upload_sync)
-            logger.info(f"GCS upload success: {url}")
             return url
         except Exception as e:
-            logger.error(f"GCS upload failed: {e}")
+            logger.error(f"S3 upload failed: {e}")
             raise e
 
     async def delete(self, file_path: str) -> bool:
         import asyncio
         
         def _delete_sync():
-            # URL에서 객체 이름 추출
-            # 예: https://storage.googleapis.com/bucket-name/users/1/profile.jpg -> users/1/profile.jpg
-            prefix = f"https://storage.googleapis.com/{self.bucket_name}/"
-            if file_path.startswith(prefix):
-                blob_name = file_path[len(prefix):]
-            else:
-                # URL이 아닌 경우 그대로 시도
-                blob_name = file_path
-                
-            blob = self.bucket.blob(blob_name)
-            if blob.exists():
-                blob.delete()
+            try:
+                # URL에서 파일 키(Key) 추출
+                # 예: https://bucket.s3.region.amazonaws.com/folder/image.jpg -> folder/image.jpg
+                if "amazonaws.com/" in file_path:
+                    key = file_path.split("amazonaws.com/")[-1]
+                else:
+                    # URL 형식이 다르거나 이미 키만 넘어온 경우
+                    key = file_path
+                    
+                self.s3_client.delete_object(Bucket=self.bucket_name, Key=key)
+                logger.info(f"S3 delete success: {key}")
                 return True
-            return False
+                
+            except ClientError as e:
+                logger.error(f"S3 delete failed: {e}")
+                return False
 
         try:
             result = await asyncio.to_thread(_delete_sync)
-            if result:
-                logger.info(f"GCS delete success: {file_path}")
             return result
         except Exception as e:
-            logger.error(f"GCS delete failed: {e}")
+            logger.error(f"S3 delete failed: {e}")
             return False
+
 
 
 def get_storage_service() -> StorageService:
     """환경 변수에 따라 적절한 StorageService 인스턴스를 반환합니다."""
     storage_type = os.getenv("STORAGE_TYPE", "local").lower()
     
-    if storage_type == "gcs":
-        bucket_name = os.getenv("GCS_BUCKET_NAME")
-        credentials_path = os.getenv("GCS_CREDENTIALS_PATH")
+    if storage_type == "s3":
+        access_key = os.getenv("AWS_ACCESS_KEY_ID")
+        secret_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+        region = os.getenv("AWS_REGION", "ap-northeast-2")
+        bucket_name = os.getenv("AWS_S3_BUCKET_NAME")
         
-        if not bucket_name:
-            logger.warning("GCS_BUCKET_NAME not set, falling back to local storage")
+        if not (access_key and secret_key and bucket_name):
+            logger.warning("AWS S3 credentials (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME) not fully set, falling back to local storage")
             return LocalStorageService()
             
-        return GCSStorageService(bucket_name, credentials_path)
+        return S3StorageService(access_key, secret_key, region, bucket_name)
     
     return LocalStorageService()
+
