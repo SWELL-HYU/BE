@@ -149,22 +149,16 @@ else:
 
 # @title 4. JSON 파일 일괄 처리 (Batch Processing)
 
-input_json_path = "input_data.json" # 업로드한 JSON 파일 경로
-output_json_path = "output_embeddings.json"
+# @title 4. JSON 파일 일괄 처리 (Batch Processing)
 
-# 예시 데이터 생성 (실제 사용 시에는 주석 처리하고 파일 업로드)
-sample_data = [
-    {
-        "id": 1,
-        "image_url": "https://image.msscdn.net/images/style/list/2025041614264200000004483.jpg?w=260",
-        "description": "겨울철 따뜻한 롱패딩 코디 #패딩 #겨울"
-    }
-]
-with open(input_json_path, 'w', encoding='utf-8') as f:
-    json.dump(sample_data, f, ensure_ascii=False, indent=2)
-
+input_json_path = "coordis_export.json"  # 업로드한 파일 이름과 일치해야 함!
+output_json_path = "coordis_with_embeddings.json"
 
 def process_json_file(input_path, output_path):
+    if not os.path.exists(input_path):
+        print(f"Error: Input file '{input_path}' not found. Please upload it first.")
+        return
+
     with open(input_path, 'r', encoding='utf-8') as f:
         data = json.load(f)
 
@@ -176,9 +170,13 @@ def process_json_file(input_path, output_path):
     for item in tqdm(data):
         try:
             url = item.get('image_url') or item.get('img_url')
+            # coordis_export.json has 'coordi_id', make sure to preserve it
+            
             desc = item.get('description', '')
 
             if not url:
+                print(f"Skipping item {item.get('coordi_id')}: No image URL")
+                results.append(item) # Keep item even if skipped, or maybe skip embedding
                 continue
 
             # 1. Crop Person
@@ -188,15 +186,18 @@ def process_json_file(input_path, output_path):
                 # 2. Generate Embedding
                 embedding = generate_multimodal_embedding(cropped_img, desc)
 
-                # 결과 저장
-                item['embedding'] = embedding
-                # item['embedding_vector']Str = str(embedding) # DB 저장용 문자열이 필요할 경우
-
+                # 결과 저장 (리스트 형태)
+                item['description_embedding'] = embedding # DB Column name
+                
                 results.append(item)
                 processed_count += 1
+            else:
+                 print(f"Skipping item {item.get('coordi_id')}: Crop failed")
+                 results.append(item)
 
         except Exception as e:
-            print(f"Skipping item {item.get('id')}: {e}")
+            print(f"Skipping item {item.get('coordi_id')}: {e}")
+            results.append(item)
             continue
 
     # 저장
@@ -207,5 +208,7 @@ def process_json_file(input_path, output_path):
     print(f"Saved to {output_path}")
 
 # 실행
-process_json_file(input_json_path, output_json_path)
+if __name__ == "__main__":
+    # Colab에서 실행 시 바로 작동하도록
+    process_json_file(input_json_path, output_json_path)
 

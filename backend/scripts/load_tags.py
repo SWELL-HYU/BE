@@ -81,7 +81,7 @@ def load_tags_from_json(json_file_path: str) -> None:
         # 태그 ID 시퀀스를 1로 리셋
         # PostgreSQL에서 시퀀스 이름을 동적으로 가져오기
         result = db.execute(
-            text("SELECT pg_get_serial_sequence('\"Tags\"', 'tag_id')")
+            text("SELECT pg_get_serial_sequence('tags', 'tag_id')")
         ).scalar()
         
         if result:
@@ -90,7 +90,7 @@ def load_tags_from_json(json_file_path: str) -> None:
             print(f"  - 태그 ID 시퀀스({sequence_name})를 1로 초기화")
         else:
             # 시퀀스 이름을 직접 지정 (fallback)
-            db.execute(text("ALTER SEQUENCE \"Tags_tag_id_seq\" RESTART WITH 1"))
+            db.execute(text("ALTER SEQUENCE tags_tag_id_seq RESTART WITH 1"))
             print("  - 태그 ID 시퀀스를 1로 초기화")
         
         db.commit()

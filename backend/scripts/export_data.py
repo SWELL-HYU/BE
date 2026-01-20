@@ -206,6 +206,35 @@ def export_data():
                 })
         print(f"Exported {len(view_logs)} rows to user_outfit_view_time.csv")
 
+        # 3. Export coordis for embedding generation (JSON)
+        # We need this to generate embeddings in Colab if we can't connect to DB directly
+        from app.models.coordi import Coordi
+        import json
+
+        coordis = db.execute(select(Coordi)).scalars().all()
+        coordis_data = []
+        for coordi in coordis:
+            # Get first image url if exists
+            image_url = None
+            if coordi.images:
+                # Assuming CoordiImage has 'image_url' field. 
+                # If it's different (e.g. 'url'), this might need adjustment.
+                # Based on common patterns and previous context.
+                image_url = coordi.images[0].image_url
+
+            coordis_data.append({
+                "coordi_id": coordi.coordi_id,
+                "image_url": image_url,
+                "description": coordi.description,
+                "style": coordi.style,
+                "created_at": str(coordi.created_at) if coordi.created_at else None
+            })
+        
+        with open('coordis_export.json', 'w', encoding='utf-8') as jsonfile:
+            json.dump(coordis_data, jsonfile, ensure_ascii=False, indent=4)
+            
+        print(f"Exported {len(coordis)} coordis to coordis_export.json")
+
     except Exception as e:
         print(f"An error occurred: {e}")
         traceback.print_exc()

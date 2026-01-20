@@ -42,8 +42,8 @@ def update_embeddings_from_json(json_file: str = "output_embeddings.json"):
         logger.info(f"Loaded {total_items} items. Processing...")
 
         for idx, item in enumerate(data):
-            coordi_id = item.get('id')
-            embedding = item.get('embedding')
+            coordi_id = item.get('coordi_id')
+            embedding = item.get('description_embedding')
             
             if not coordi_id or not embedding:
                 logger.warning(f"Skipping item {idx}: Missing id or embedding")
@@ -58,8 +58,9 @@ def update_embeddings_from_json(json_file: str = "output_embeddings.json"):
             result = db.execute(stmt)
             updated_count += result.rowcount
             
-            if (idx + 1) % 100 == 0:
-                logger.info(f"Progress: {idx + 1}/{total_items}")
+            if (idx + 1) % 50 == 0:
+                db.commit()
+                logger.info(f"Progress: {idx + 1}/{total_items} committed...")
                 
         db.commit()
         logger.info(f"Successfully updated {updated_count} coordis.")
