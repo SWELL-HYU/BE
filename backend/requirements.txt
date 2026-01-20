@@ -13,7 +13,7 @@ pgvector==0.2.3
 
 # --- Embedding & ML ---
 sentence-transformers>=2.7.0
-torch>=2.0.0
+torch==2.3.1 --index-url https://download.pytorch.org/whl/cpu
 numpy>=1.24.0
 
 # --- Migrations ---
@@ -32,7 +32,7 @@ PyJWT==2.9.0
 google-genai==0.3.0
 Pillow==10.4.0
 requests==2.31.0  # 이미지 다운로드용
-mediapipe>=0.10.0  # 포즈 검증용
+mediapipe==0.10.14  # 포즈 검증용
 
 # --- Async file I/O ---
 aiofiles==24.1.0
