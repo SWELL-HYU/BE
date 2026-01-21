@@ -112,3 +112,23 @@ backend/
 ├── requirements.txt     # 의존성 목록
 └── docker-compose.yml   # PostgreSQL 컨테이너 설정
 ```
+
+### 실행 명렁어
+추가로 t3.large랑 25gb 스토리지 볼륨 권장
+```
+#!/bin/bash
+# --- 1. 시스템 업데이트 ---
+dnf update -y
+# --- 2. 필수 개발 도구 및 라이브러리 설치 (딱 이것만!) ---
+# - python3.11: 실행 환경
+# - postgresql15-devel: DB 드라이버 빌드용
+# - mesa-libGL, glib2: AI/이미지 처리용 (OpenCV 등)
+# - git: 코드 다운로드용
+# - gcc: 라이브러리 컴파일용
+dnf install -y python3.11 python3.11-devel python3.11-pip \
+    git gcc \
+    postgresql15-devel \
+    mesa-libGL glib2
+# --- 3. 완료 메시지 ---
+echo "Ready to Deploy!" > /home/ec2-user/setup_complete.txt
+```
